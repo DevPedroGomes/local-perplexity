@@ -25,15 +25,15 @@ app = FastAPI(
     from multiple sources to provide comprehensive answers.
 
     ### Features:
-    - 🔍 Multi-query web search
-    - 📝 AI-powered content synthesis
-    - 📚 Source citations with references
-    - 👥 Multi-user session support (up to 35 concurrent users)
-    - 🌊 Real-time streaming responses
+    - Multi-query web search
+    - AI-powered content synthesis
+    - Source citations with references
+    - Multi-user session support (up to 35 concurrent users)
+    - Real-time streaming responses
 
     ### Built with:
     - LangGraph for workflow orchestration
-    - Ollama for local LLM inference
+    - Groq for fast LLM inference
     - Tavily for web search
     - FastAPI for the REST API
     """,

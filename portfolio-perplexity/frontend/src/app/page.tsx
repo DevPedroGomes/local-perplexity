@@ -88,7 +88,7 @@ export default function Home() {
             </p>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Badge variant="outline" className="font-normal">LangGraph</Badge>
-              <Badge variant="outline" className="font-normal">Ollama</Badge>
+              <Badge variant="outline" className="font-normal">Groq</Badge>
               <Badge variant="outline" className="font-normal">Tavily</Badge>
             </div>
 
