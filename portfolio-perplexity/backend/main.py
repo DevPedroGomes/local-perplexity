@@ -1,19 +1,31 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import logging
 
 from app.core.config import settings
 from app.api import api_router
 
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    print(f"🚀 Starting {settings.PROJECT_NAME}")
-    print(f"📊 Max concurrent sessions: {settings.MAX_CONCURRENT_SESSIONS}")
+    logger.info(f"Starting {settings.PROJECT_NAME}")
+    logger.info(f"Max concurrent sessions: {settings.MAX_CONCURRENT_SESSIONS}")
+    logger.info(f"Primary LLM: Cerebras ({settings.CEREBRAS_MODEL})")
+    if settings.DEEPSEEK_API_KEY:
+        logger.info(f"Fallback LLM: DeepSeek ({settings.DEEPSEEK_MODEL})")
     yield
     # Shutdown
-    print("👋 Shutting down...")
+    logger.info("Shutting down...")
 
 
 app = FastAPI(
@@ -25,28 +37,39 @@ app = FastAPI(
     from multiple sources to provide comprehensive answers.
 
     ### Features:
-    - Multi-query web search
-    - AI-powered content synthesis
-    - Source citations with references
+    - Multi-query web search with 5 results per query
+    - AI-powered content synthesis with source verification
+    - Source citations with inline references
     - Multi-user session support (up to 35 concurrent users)
     - Real-time streaming responses
+    - Self-reflection loop for quality assurance
 
     ### Built with:
     - LangGraph for workflow orchestration
-    - Groq for fast LLM inference
+    - Cerebras for ultra-fast LLM inference (1M tokens/day free)
+    - DeepSeek as fallback (cheapest API)
     - Tavily for web search
     - FastAPI for the REST API
+
+    ### Advanced RAG Techniques:
+    - Chain-of-Thought query generation
+    - Grounded generation (only supported claims)
+    - Self-reflection with automatic improvement
     """,
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# CORS configuration
+# CORS configuration - Only allow all origins in development
+cors_origins = settings.BACKEND_CORS_ORIGINS
+if settings.ENV == "development":
+    cors_origins = ["*"]  # Allow all in development only
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS + ["*"],  # Allow all for development
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,9 +83,13 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 async def root():
     return {
         "name": settings.PROJECT_NAME,
-        "version": "1.0.0",
+        "version": "2.0.0",
         "docs": "/docs",
-        "health": f"{settings.API_V1_STR}/health"
+        "health": f"{settings.API_V1_STR}/health",
+        "llm_providers": {
+            "primary": f"Cerebras ({settings.CEREBRAS_MODEL})",
+            "fallback": f"DeepSeek ({settings.DEEPSEEK_MODEL})" if settings.DEEPSEEK_API_KEY else None
+        }
     }
 
 

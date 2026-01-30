@@ -5,10 +5,26 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Bot, Sparkles } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 interface ResponseDisplayProps {
   response: string;
   isLoading?: boolean;
+}
+
+// Sanitize text to prevent XSS attacks
+function sanitizeText(text: string): string {
+  return DOMPurify.sanitize(text, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+}
+
+// Sanitize URL to prevent javascript: and data: URLs
+function sanitizeUrl(url: string): string {
+  const sanitized = DOMPurify.sanitize(url, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+  // Only allow http and https URLs
+  if (sanitized.startsWith('http://') || sanitized.startsWith('https://')) {
+    return sanitized;
+  }
+  return '#';
 }
 
 // Simple markdown-like rendering
@@ -49,21 +65,23 @@ function renderInlineMarkdown(text: string) {
   return parts.map((part, idx) => {
     // Bold text
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={idx}>{part.slice(2, -2)}</strong>;
+      return <strong key={idx}>{sanitizeText(part.slice(2, -2))}</strong>;
     }
 
-    // Links
+    // Links - sanitize both text and URL to prevent XSS
     const linkMatch = part.match(/\[([^\]]+)\]\(([^)]+)\)/);
     if (linkMatch) {
+      const linkText = sanitizeText(linkMatch[1]);
+      const linkUrl = sanitizeUrl(linkMatch[2]);
       return (
         <a
           key={idx}
-          href={linkMatch[2]}
+          href={linkUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary hover:underline"
         >
-          {linkMatch[1]}
+          {linkText}
         </a>
       );
     }
@@ -77,7 +95,7 @@ function renderInlineMarkdown(text: string) {
       );
     }
 
-    return part;
+    return sanitizeText(part);
   });
 }
 

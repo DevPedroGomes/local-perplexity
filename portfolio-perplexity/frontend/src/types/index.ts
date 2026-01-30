@@ -30,6 +30,8 @@ export interface StreamEvent {
     response?: string;
     sources_count?: number;
     queries_count?: number;
+    provider?: string;
+    reflection_verdict?: string;
   };
 }
 

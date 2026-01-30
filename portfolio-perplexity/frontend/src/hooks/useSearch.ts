@@ -9,6 +9,7 @@ const COOLDOWN_SECONDS = 10;
 
 interface UseSearchReturn {
   search: (query: string) => Promise<void>;
+  retry: () => Promise<void>;
   status: SearchStatus;
   statusMessage: string;
   progress: { current: number; total: number } | null;
@@ -19,6 +20,8 @@ interface UseSearchReturn {
   sessionId: string | null;
   remainingSearches: number;
   cooldown: number;
+  provider: string | null;
+  lastQuery: string | null;
   reset: () => void;
 }
 
@@ -33,6 +36,8 @@ export function useSearch(): UseSearchReturn {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [remainingSearches, setRemainingSearches] = useState(MAX_SEARCHES);
   const [cooldown, setCooldown] = useState(0);
+  const [provider, setProvider] = useState<string | null>(null);
+  const [lastQuery, setLastQuery] = useState<string | null>(null);
 
   // Load session from localStorage
   useEffect(() => {
@@ -65,6 +70,7 @@ export function useSearch(): UseSearchReturn {
     setSources([]);
     setResponse('');
     setError(null);
+    setProvider(null);
   }, []);
 
   const search = useCallback(async (query: string) => {
@@ -83,6 +89,7 @@ export function useSearch(): UseSearchReturn {
     }
 
     reset();
+    setLastQuery(query);
     setStatus('generating-queries');
     setStatusMessage('Starting research...');
 
@@ -117,6 +124,13 @@ export function useSearch(): UseSearchReturn {
     }
   }, [sessionId, cooldown, remainingSearches, reset]);
 
+  // Retry the last failed search
+  const retry = useCallback(async () => {
+    if (lastQuery && status === 'error') {
+      await search(lastQuery);
+    }
+  }, [lastQuery, status, search]);
+
   const handleStreamEvent = (event: StreamEvent) => {
     switch (event.event) {
       case 'session':
@@ -130,6 +144,9 @@ export function useSearch(): UseSearchReturn {
 
       case 'status':
         setStatusMessage(event.data.message || '');
+        if (event.data.provider) {
+          setProvider(event.data.provider);
+        }
         if (event.data.step === 'queries') {
           setStatus('generating-queries');
         } else if (event.data.step === 'search') {
@@ -168,6 +185,9 @@ export function useSearch(): UseSearchReturn {
       case 'done':
         setStatus('complete');
         setStatusMessage('Research complete!');
+        if (event.data.provider) {
+          setProvider(event.data.provider);
+        }
         // Decrement remaining searches
         setRemainingSearches(prev => Math.max(0, prev - 1));
         break;
@@ -181,6 +201,7 @@ export function useSearch(): UseSearchReturn {
 
   return {
     search,
+    retry,
     status,
     statusMessage,
     progress,
@@ -191,6 +212,8 @@ export function useSearch(): UseSearchReturn {
     sessionId,
     remainingSearches,
     cooldown,
+    provider,
+    lastQuery,
     reset,
   };
 }

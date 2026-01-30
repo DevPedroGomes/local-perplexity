@@ -1,13 +1,24 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 import json
+import logging
 
+from app.core.config import settings
 from app.core.schemas import SearchRequest, SearchResponse, HealthResponse
 from app.services.session_manager import session_manager
 from app.services.research_agent import create_research_agent
 from datetime import datetime
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def sanitize_error_message(error: Exception) -> str:
+    """Sanitize error messages to avoid leaking sensitive information in production."""
+    if settings.ENV == "development":
+        return str(error)
+    # In production, return a generic message
+    return "An internal error occurred. Please try again."
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -67,7 +78,8 @@ async def search(request: SearchRequest):
     try:
         result = agent.search(request.query)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+        logger.error(f"Search failed for query '{request.query}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Search failed: {sanitize_error_message(e)}")
 
     # Add to history
     await session_manager.add_to_history(session_id, request.query, result["response"])
@@ -134,7 +146,8 @@ async def search_stream(request: SearchRequest):
                 yield f"data: {json.dumps(event)}\n\n"
 
         except Exception as e:
-            yield f"data: {json.dumps({'event': 'error', 'data': {'message': str(e)}})}\n\n"
+            logger.error(f"Stream search failed: {e}", exc_info=True)
+            yield f"data: {json.dumps({'event': 'error', 'data': {'message': sanitize_error_message(e)}})}\n\n"
 
     return StreamingResponse(
         event_generator(),

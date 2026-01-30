@@ -3,11 +3,13 @@
 import { useSearch } from '@/hooks/useSearch';
 import { SearchBar, SearchStatusIndicator, SourcesList, ResponseDisplay, QueriesList } from '@/components/search';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Github, ExternalLink, Clock, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sparkles, Github, ExternalLink, Clock, Zap, RotateCcw } from 'lucide-react';
 
 export default function Home() {
   const {
     search,
+    retry,
     status,
     statusMessage,
     progress,
@@ -17,6 +19,8 @@ export default function Home() {
     error,
     remainingSearches,
     cooldown,
+    provider,
+    lastQuery,
   } = useSearch();
 
   const isLoading = ['generating-queries', 'searching', 'synthesizing'].includes(status);
@@ -36,6 +40,11 @@ export default function Home() {
             </div>
             <span className="font-semibold">Research Agent</span>
             <Badge variant="secondary" className="text-xs">AI Powered</Badge>
+            {provider && (
+              <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/20">
+                {provider}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-3">
             {/* Rate limit indicators */}
@@ -61,10 +70,11 @@ export default function Home() {
               </Badge>
             </div>
             <a
-              href="https://github.com"
+              href="https://github.com/DevPedroGomes/local-perplexity"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="View source on GitHub"
             >
               <Github className="h-5 w-5" />
             </a>
@@ -88,7 +98,7 @@ export default function Home() {
             </p>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Badge variant="outline" className="font-normal">LangGraph</Badge>
-              <Badge variant="outline" className="font-normal">Groq</Badge>
+              <Badge variant="outline" className="font-normal">Cerebras</Badge>
               <Badge variant="outline" className="font-normal">Tavily</Badge>
             </div>
 
@@ -140,13 +150,28 @@ export default function Home() {
           </div>
         )}
 
-        {/* Error display */}
+        {/* Error display with retry button */}
         {error && (
           <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
-            <p className="font-medium">
-              {status === 'rate-limited' ? 'Rate Limited' : status === 'quota-exceeded' ? 'Quota Exceeded' : 'Error'}
-            </p>
-            <p className="text-sm">{error}</p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-medium">
+                  {status === 'rate-limited' ? 'Rate Limited' : status === 'quota-exceeded' ? 'Quota Exceeded' : 'Error'}
+                </p>
+                <p className="text-sm">{error}</p>
+              </div>
+              {status === 'error' && lastQuery && remainingSearches > 0 && cooldown === 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={retry}
+                  className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/10"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
@@ -198,7 +223,9 @@ export default function Home() {
             <p>Perplexity Clone - Research Agent</p>
             <div className="flex items-center gap-4">
               <a
-                href="#"
+                href="https://github.com/DevPedroGomes"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="hover:text-foreground transition-colors flex items-center gap-1"
               >
                 Portfolio <ExternalLink className="h-3 w-3" />
