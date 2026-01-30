@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"Starting {settings.PROJECT_NAME}")
     logger.info(f"Max concurrent sessions: {settings.MAX_CONCURRENT_SESSIONS}")
-    logger.info(f"Primary LLM: Cerebras ({settings.CEREBRAS_MODEL})")
+    logger.info(f"Primary LLM: Groq ({settings.GROQ_MODEL})")
     if settings.DEEPSEEK_API_KEY:
         logger.info(f"Fallback LLM: DeepSeek ({settings.DEEPSEEK_MODEL})")
     yield
@@ -46,7 +46,7 @@ app = FastAPI(
 
     ### Built with:
     - LangGraph for workflow orchestration
-    - Cerebras for ultra-fast LLM inference (1M tokens/day free)
+    - Groq for ultra-fast LLM inference (free tier)
     - DeepSeek as fallback (cheapest API)
     - Tavily for web search
     - FastAPI for the REST API
@@ -87,7 +87,7 @@ async def root():
         "docs": "/docs",
         "health": f"{settings.API_V1_STR}/health",
         "llm_providers": {
-            "primary": f"Cerebras ({settings.CEREBRAS_MODEL})",
+            "primary": f"Groq ({settings.GROQ_MODEL})",
             "fallback": f"DeepSeek ({settings.DEEPSEEK_MODEL})" if settings.DEEPSEEK_API_KEY else None
         }
     }

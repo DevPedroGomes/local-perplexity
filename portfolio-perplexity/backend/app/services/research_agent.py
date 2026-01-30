@@ -5,7 +5,7 @@ This agent implements advanced RAG techniques:
 1. Chain-of-Thought: Step-by-step reasoning for query generation
 2. Grounded Generation: Only includes claims supported by sources
 3. Self-Reflection: Evaluates and improves response quality before returning
-4. Multi-provider LLM: Cerebras (fast, free tier) with DeepSeek fallback
+4. Multi-provider LLM: Groq (fastest, free tier) with DeepSeek fallback
 5. Enhanced Search: Multiple results per query for better coverage
 """
 
@@ -13,7 +13,7 @@ import logging
 from pydantic import BaseModel
 from typing import List, AsyncGenerator, Literal, Optional
 from tavily import TavilyClient
-from langchain_cerebras import ChatCerebras
+from langchain_groq import ChatGroq
 from langchain_deepseek import ChatDeepSeek
 from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.graph import StateGraph, START, END
@@ -38,7 +38,7 @@ class LLMProvider:
     """
     Multi-provider LLM wrapper with automatic fallback.
 
-    Primary: Cerebras (6x faster than Groq, 1M tokens/day free)
+    Primary: Groq (fastest inference, free tier with generous limits)
     Fallback: DeepSeek (cheapest option at $0.07/M tokens)
 
     The provider automatically switches to fallback on errors and attempts
@@ -55,17 +55,17 @@ class LLMProvider:
 
     def _init_providers(self):
         """Initialize LLM providers based on available API keys."""
-        # Primary: Cerebras
-        if settings.CEREBRAS_API_KEY:
+        # Primary: Groq (fastest, free tier)
+        if settings.GROQ_API_KEY:
             try:
-                self._primary = ChatCerebras(
-                    model=settings.CEREBRAS_MODEL,
-                    api_key=settings.CEREBRAS_API_KEY,
+                self._primary = ChatGroq(
+                    model=settings.GROQ_MODEL,
+                    api_key=settings.GROQ_API_KEY,
                     temperature=0.1,
                 )
-                logger.info(f"Initialized Cerebras with model: {settings.CEREBRAS_MODEL}")
+                logger.info(f"Initialized Groq with model: {settings.GROQ_MODEL}")
             except Exception as e:
-                logger.warning(f"Failed to initialize Cerebras: {e}")
+                logger.warning(f"Failed to initialize Groq: {e}")
 
         # Fallback: DeepSeek
         if settings.DEEPSEEK_API_KEY:
@@ -80,7 +80,7 @@ class LLMProvider:
                 logger.warning(f"Failed to initialize DeepSeek: {e}")
 
         if not self._primary and not self._fallback:
-            raise ValueError("No LLM provider configured. Set CEREBRAS_API_KEY or DEEPSEEK_API_KEY.")
+            raise ValueError("No LLM provider configured. Set GROQ_API_KEY or DEEPSEEK_API_KEY.")
 
     @property
     def llm(self) -> BaseChatModel:
@@ -130,7 +130,7 @@ class LLMProvider:
         if self._using_fallback:
             return "DeepSeek"
         if self._primary:
-            return "Cerebras"
+            return "Groq"
         return "DeepSeek"
 
 

@@ -13,14 +13,16 @@ class Settings(BaseSettings):
     # CORS - In production, only allow specified origins
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
-    # LLM Configuration - Primary: Cerebras (fast, free tier)
-    CEREBRAS_API_KEY: str = ""
-    CEREBRAS_MODEL: str = "llama-3.3-70b"  # Fast inference, free tier 1M tokens/day
-    # Alternative Cerebras models:
-    # - llama-3.3-70b (best quality, 450 tok/s)
-    # - llama3.1-8b (faster, 1800 tok/s)
+    # LLM Configuration - Primary: Groq (fastest, free tier)
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"  # Ultra-fast inference, free tier
+    # Alternative Groq models:
+    # - llama-3.3-70b-versatile (best quality, ~750 tok/s)
+    # - llama-3.1-70b-versatile (great quality, ~800 tok/s)
+    # - llama-3.1-8b-instant (faster, ~1300 tok/s)
+    # - mixtral-8x7b-32768 (good for long context)
 
-    # LLM Configuration - Fallback: DeepSeek (cheapest when exceeding free tier)
+    # LLM Configuration - Fallback: DeepSeek (cheapest paid option)
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_MODEL: str = "deepseek-chat"  # DeepSeek V3, $0.07/M input tokens
     # Alternative DeepSeek models:

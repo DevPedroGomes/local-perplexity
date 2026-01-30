@@ -43,7 +43,7 @@ AI-powered research assistant that searches the web, extracts content, and synth
                     ┌───────────────┼───────────────┐
                     ▼               ▼               ▼
             ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-            │  Cerebras   │ │  DeepSeek   │ │   Tavily    │
+            │    Groq     │ │  DeepSeek   │ │   Tavily    │
             │  (primary)  │ │ (fallback)  │ │  (search)   │
             │  Llama 3.3  │ │    V3       │ │  5 results  │
             │  FREE tier  │ │  $0.07/M    │ │  per query  │
@@ -74,7 +74,7 @@ AI-powered research assistant that searches the web, extracts content, and synth
 
 ## Key Features
 
-- **Multi-provider LLM**: Cerebras (primary, ultra-fast) with DeepSeek fallback and automatic recovery
+- **Multi-provider LLM**: Groq (primary, ultra-fast) with DeepSeek fallback and automatic recovery
 - **Enhanced Search**: 5 results per query with deduplication for better coverage
 - **Advanced RAG**: Chain-of-Thought, Grounded Generation, Self-Reflection
 - **Real-time Streaming**: Server-Sent Events (SSE) for live updates
@@ -148,7 +148,7 @@ If issues are found, the response is automatically improved (max 1 iteration to 
 | Security (FE) | DOMPurify | XSS protection for AI responses |
 | Backend | FastAPI, Python 3.11+, Pydantic | REST API with SSE streaming |
 | Workflow | LangGraph | Multi-step agent orchestration |
-| LLM (Primary) | Cerebras (llama-3.3-70b) | Ultra-fast inference, 1M tokens/day free |
+| LLM (Primary) | Groq (llama-3.3-70b-versatile) | Ultra-fast inference, free tier |
 | LLM (Fallback) | DeepSeek (deepseek-chat) | Cheapest API at $0.07/M tokens |
 | Search | Tavily API | Web search and content extraction |
 | Session | In-memory with asyncio locks | Multi-user session management |
@@ -228,7 +228,7 @@ portfolio-perplexity/
 
 - Python 3.11+
 - Node.js 20+
-- Cerebras API key (free tier: 1M tokens/day at https://cerebras.ai)
+- Groq API key (free tier at https://console.groq.com)
 - DeepSeek API key (optional fallback at https://platform.deepseek.com)
 - Tavily API key (free tier available at https://tavily.com)
 
@@ -240,7 +240,7 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
-# Edit .env: set CEREBRAS_API_KEY and TAVILY_API_KEY
+# Edit .env: set GROQ_API_KEY and TAVILY_API_KEY
 
 # Run backend (development)
 uvicorn main:app --reload --port 8000
@@ -262,8 +262,8 @@ npm run dev
 | Variable | Default | Description |
 |----------|---------|-------------|
 | ENV | development | Environment mode (development/production) |
-| CEREBRAS_API_KEY | (required) | Cerebras API key (free tier: 1M tokens/day) |
-| CEREBRAS_MODEL | llama-3.3-70b | Cerebras model |
+| GROQ_API_KEY | (required) | Groq API key (free tier) |
+| GROQ_MODEL | llama-3.3-70b-versatile | Groq model |
 | DEEPSEEK_API_KEY | (optional) | DeepSeek API key for fallback |
 | DEEPSEEK_MODEL | deepseek-chat | DeepSeek model |
 | TAVILY_API_KEY | (required) | Tavily API key |
@@ -290,7 +290,7 @@ npm run dev
    - Root Directory: `portfolio-perplexity/backend`
    - Add environment variables:
      - `ENV=production`
-     - `CEREBRAS_API_KEY=your_key`
+     - `GROQ_API_KEY=your_key`
      - `TAVILY_API_KEY=your_key`
      - `DEEPSEEK_API_KEY=your_key` (optional)
      - `BACKEND_CORS_ORIGINS=["https://your-frontend.railway.app"]`
@@ -319,20 +319,20 @@ The application uses a smart multi-provider strategy:
 ┌─────────────────────────────────────────────────────────────┐
 │                    LLM Provider Logic                       │
 ├─────────────────────────────────────────────────────────────┤
-│  1. Try PRIMARY (Cerebras)                                  │
-│     ├─ Success → Continue with Cerebras                     │
+│  1. Try PRIMARY (Groq)                                      │
+│     ├─ Success → Continue with Groq                         │
 │     └─ Failure → Switch to FALLBACK (DeepSeek)              │
 │                                                             │
 │  2. While using FALLBACK:                                   │
 │     ├─ Count successful calls                               │
 │     └─ After 5 calls → Try PRIMARY again                    │
-│        ├─ Success → Return to Cerebras                      │
+│        ├─ Success → Return to Groq                          │
 │        └─ Failure → Continue with DeepSeek                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 This ensures:
-- Fast responses with Cerebras when available
+- Fast responses with Groq when available
 - Automatic failover to DeepSeek on errors
 - Periodic recovery attempts to return to primary
 - No manual intervention required
@@ -341,7 +341,7 @@ This ensures:
 
 | Component | Free Tier | Paid Usage |
 |-----------|-----------|------------|
-| Cerebras | 1M tokens/day | $0.60/M tokens |
+| Groq | Free tier (generous limits) | Pay-as-you-go |
 | DeepSeek (fallback) | - | $0.07/M tokens |
 | Tavily | 1000 searches/month | $0.01/search |
 
@@ -368,4 +368,4 @@ MIT
 
 ---
 
-Built with Next.js, FastAPI, LangGraph, Cerebras, DeepSeek, and Tavily.
+Built with Next.js, FastAPI, LangGraph, Groq, DeepSeek, and Tavily.
