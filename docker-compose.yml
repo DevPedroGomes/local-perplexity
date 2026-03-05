@@ -1,0 +1,72 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: searcher-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - ENV=production
+    networks:
+      - proxy
+      - internal
+    labels:
+      - "traefik.enable=true"
+      # API router
+      - "traefik.http.routers.searcher-api.entrypoints=https"
+      - "traefik.http.routers.searcher-api.rule=Host(`searcher.pgdev.com.br`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.searcher-api.tls=true"
+      - "traefik.http.routers.searcher-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.searcher-api.middlewares=searcher-security@docker"
+      - "traefik.http.routers.searcher-api.priority=10"
+      - "traefik.http.services.searcher-api.loadbalancer.server.port=8000"
+      # Security Headers
+      - "traefik.http.middlewares.searcher-security.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.searcher-security.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.searcher-security.headers.stsPreload=true"
+      - "traefik.http.middlewares.searcher-security.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.searcher-security.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.searcher-security.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.searcher-security.headers.referrerPolicy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.searcher-security.headers.frameDeny=true"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://searcher.pgdev.com.br/api/v1
+    container_name: searcher-frontend
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      # Frontend router (everything except /api)
+      - "traefik.http.routers.searcher.entrypoints=https"
+      - "traefik.http.routers.searcher.rule=Host(`searcher.pgdev.com.br`)"
+      - "traefik.http.routers.searcher.tls=true"
+      - "traefik.http.routers.searcher.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.searcher.middlewares=searcher-security@docker"
+      - "traefik.http.routers.searcher.priority=1"
+      - "traefik.http.services.searcher.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD", "wget", "-O", "-", "http://127.0.0.1:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  proxy:
+    external: true
+  internal:
+    driver: bridge
