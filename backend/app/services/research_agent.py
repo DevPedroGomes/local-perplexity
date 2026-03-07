@@ -28,6 +28,7 @@ from app.core.prompts import (
     GROUNDED_SYNTHESIS_PROMPT,
     SELF_REFLECTION_PROMPT,
     IMPROVE_RESPONSE_PROMPT,
+    FOLLOW_UP_QUESTIONS_PROMPT,
 )
 
 
@@ -548,6 +549,32 @@ class ResearchAgent:
                 "provider": self.llm_provider.get_provider_name()
             }
         }
+
+        # Generate follow-up questions (non-blocking — errors are silently ignored)
+        try:
+            follow_up_questions = self._generate_follow_up_questions(
+                query, state.draft_response[:500]
+            )
+            if follow_up_questions:
+                yield {
+                    "event": "follow_up",
+                    "data": {"questions": follow_up_questions}
+                }
+        except Exception as e:
+            logger.warning(f"Follow-up generation failed: {e}")
+
+    def _generate_follow_up_questions(self, user_input: str, response_summary: str) -> List[str]:
+        """Generate follow-up questions based on the research results."""
+        class FollowUpQuestions(BaseModel):
+            questions: List[str]
+
+        prompt = FOLLOW_UP_QUESTIONS_PROMPT.format(
+            user_input=user_input,
+            response_summary=response_summary
+        )
+
+        result = self.llm_provider.invoke_structured(prompt, FollowUpQuestions)
+        return result.questions[:3]
 
 
 # Singleton instance — reused across requests

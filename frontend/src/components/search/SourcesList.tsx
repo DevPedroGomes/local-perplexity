@@ -2,7 +2,6 @@
 
 import { Source } from '@/types';
 import { SourceCard } from './SourceCard';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileText } from 'lucide-react';
 
@@ -23,29 +22,22 @@ export function SourcesList({ sources, isLoading = false }: SourcesListProps) {
         </h3>
       </div>
 
-      <ScrollArea className="w-full whitespace-nowrap">
-        <div className="flex gap-3 pb-4">
-          {sources.map((source, index) => (
-            <div key={index} className="w-[280px] shrink-0">
-              <SourceCard source={source} index={index} />
-            </div>
-          ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {sources.map((source, index) => (
+          <SourceCard key={index} source={source} index={index} />
+        ))}
 
-          {isLoading && (
-            <div className="w-[280px] shrink-0">
-              <div className="rounded-lg border bg-card/50 p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-6 w-6 rounded-full" />
-                  <Skeleton className="h-4 w-32" />
-                </div>
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
+        {isLoading && (
+          <div className="rounded-lg border bg-card/50 p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-6 w-6 rounded-full" />
+              <Skeleton className="h-4 w-32" />
             </div>
-          )}
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

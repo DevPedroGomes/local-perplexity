@@ -4,3 +4,6 @@ export { SourceCard } from './SourceCard';
 export { SourcesList } from './SourcesList';
 export { ResponseDisplay } from './ResponseDisplay';
 export { QueriesList } from './QueriesList';
+export { PipelineVisualization } from './PipelineVisualization';
+export { ThinkingPanel } from './ThinkingPanel';
+export { FollowUpQuestions } from './FollowUpQuestions';

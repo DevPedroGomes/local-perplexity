@@ -145,6 +145,28 @@ Improved response:
 """
 
 
+# Follow-up Questions Generation
+FOLLOW_UP_QUESTIONS_PROMPT = """Based on the research question and the response generated, suggest 3 follow-up questions that the user might want to explore next.
+
+Original Question:
+<QUESTION>
+{user_input}
+</QUESTION>
+
+Generated Response (summary):
+<RESPONSE>
+{response_summary}
+</RESPONSE>
+
+Generate 3 follow-up questions that:
+1. Explore deeper aspects of the topic not fully covered
+2. Investigate related or adjacent topics the user might find interesting
+3. Challenge or expand on the findings in the response
+
+The questions should be specific, actionable, and different from the original question.
+"""
+
+
 # Legacy prompt names for backward compatibility
 agent_prompt = SYSTEM_PROMPT
 build_queries_prompt = QUERY_GENERATION_PROMPT

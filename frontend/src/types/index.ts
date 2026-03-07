@@ -14,7 +14,7 @@ export interface SearchResponse {
 }
 
 export interface StreamEvent {
-  event: 'session' | 'status' | 'queries' | 'source' | 'content' | 'done' | 'error';
+  event: 'session' | 'status' | 'queries' | 'source' | 'content' | 'done' | 'error' | 'follow_up';
   data: {
     session_id?: string;
     remaining_searches?: number;
@@ -35,6 +35,7 @@ export interface StreamEvent {
     queries_count?: number;
     provider?: string;
     reflection_verdict?: string;
+    questions?: string[];
   };
 }
 

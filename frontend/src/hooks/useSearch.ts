@@ -1,11 +1,18 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { searchQueryStream } from '@/lib/api';
+import { searchQueryStream, getSession } from '@/lib/api';
 import { Source, SearchStatus, StreamEvent } from '@/types';
 
 const MAX_SEARCHES = 5;
 const COOLDOWN_SECONDS = 10;
+
+export interface ThinkingStep {
+  id: string;
+  label: string;
+  detail: string;
+  timestamp: number;
+}
 
 interface UseSearchReturn {
   search: (query: string) => Promise<void>;
@@ -22,6 +29,9 @@ interface UseSearchReturn {
   cooldown: number;
   provider: string | null;
   lastQuery: string | null;
+  reflectionVerdict: string | null;
+  thinkingSteps: ThinkingStep[];
+  followUpQuestions: string[];
   reset: () => void;
 }
 
@@ -38,12 +48,27 @@ export function useSearch(): UseSearchReturn {
   const [cooldown, setCooldown] = useState(0);
   const [provider, setProvider] = useState<string | null>(null);
   const [lastQuery, setLastQuery] = useState<string | null>(null);
+  const [reflectionVerdict, setReflectionVerdict] = useState<string | null>(null);
+  const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
+  const [followUpQuestions, setFollowUpQuestions] = useState<string[]>([]);
 
-  // Load session from localStorage
+  // Load session from localStorage and sync with backend
   useEffect(() => {
     const stored = localStorage.getItem('research_session_id');
     if (stored) {
       setSessionId(stored);
+      getSession(stored).then((info) => {
+        if (info) {
+          setRemainingSearches(info.remaining_searches);
+          if (info.cooldown_remaining > 0) {
+            setCooldown(info.cooldown_remaining);
+          }
+        } else {
+          localStorage.removeItem('research_session_id');
+        }
+      }).catch(() => {
+        localStorage.removeItem('research_session_id');
+      });
     }
   }, []);
 
@@ -62,6 +87,10 @@ export function useSearch(): UseSearchReturn {
     }
   }, [cooldown]);
 
+  const addThinkingStep = useCallback((id: string, label: string, detail: string) => {
+    setThinkingSteps(prev => [...prev, { id, label, detail, timestamp: Date.now() }]);
+  }, []);
+
   const reset = useCallback(() => {
     setStatus('idle');
     setStatusMessage('');
@@ -71,17 +100,18 @@ export function useSearch(): UseSearchReturn {
     setResponse('');
     setError(null);
     setProvider(null);
+    setReflectionVerdict(null);
+    setThinkingSteps([]);
+    setFollowUpQuestions([]);
   }, []);
 
   const search = useCallback(async (query: string) => {
-    // Check if rate limited
     if (cooldown > 0) {
       setStatus('rate-limited');
       setError(`Please wait ${cooldown} seconds before searching again.`);
       return;
     }
 
-    // Check if quota exceeded
     if (remainingSearches <= 0) {
       setStatus('quota-exceeded');
       setError('Search quota exceeded. You have reached the maximum of 5 searches per session.');
@@ -92,17 +122,16 @@ export function useSearch(): UseSearchReturn {
     setLastQuery(query);
     setStatus('generating-queries');
     setStatusMessage('Starting research...');
+    addThinkingStep('init', 'Research Started', `Analyzing question: "${query}"`);
 
     try {
       for await (const event of searchQueryStream(query, sessionId || undefined)) {
         handleStreamEvent(event);
       }
 
-      // Start cooldown after successful search
       setCooldown(COOLDOWN_SECONDS);
 
     } catch (err: unknown) {
-      // Handle rate limit errors from API
       if (err instanceof Error && err.message.includes('429')) {
         const match = err.message.match(/wait (\d+) seconds/);
         if (match) {
@@ -122,9 +151,8 @@ export function useSearch(): UseSearchReturn {
         setError(err instanceof Error ? err.message : 'An error occurred');
       }
     }
-  }, [sessionId, cooldown, remainingSearches, reset]);
+  }, [sessionId, cooldown, remainingSearches, reset, addThinkingStep]);
 
-  // Retry the last failed search
   const retry = useCallback(async () => {
     if (lastQuery && status === 'error') {
       await search(lastQuery);
@@ -149,24 +177,38 @@ export function useSearch(): UseSearchReturn {
         }
         if (event.data.step === 'queries') {
           setStatus('generating-queries');
+          addThinkingStep('queries', 'Query Planning', 'Using Chain-of-Thought reasoning to generate diverse search queries...');
         } else if (event.data.step === 'search') {
           setStatus('searching');
           if (event.data.current && event.data.total) {
             setProgress({ current: event.data.current, total: event.data.total });
+            addThinkingStep(
+              `search-${event.data.current}`,
+              `Searching (${event.data.current}/${event.data.total})`,
+              event.data.message || 'Executing web search...'
+            );
           }
         } else if (event.data.step === 'synthesis') {
           setStatus('synthesizing');
           setProgress(null);
+          addThinkingStep('synthesis', 'Grounded Synthesis', 'Generating citation-backed response from verified sources...');
         } else if (event.data.step === 'reflection') {
           setStatus('reflecting');
+          addThinkingStep('reflection', 'Self-Reflection', 'Evaluating response for completeness, accuracy, and citation quality...');
         } else if (event.data.step === 'improvement') {
           setStatus('improving');
+          addThinkingStep('improvement', 'Improvement', 'Rewriting response to address identified issues...');
         }
         break;
 
       case 'queries':
         if (event.data.queries) {
           setQueries(event.data.queries);
+          addThinkingStep(
+            'queries-result',
+            `Generated ${event.data.queries.length} Queries`,
+            event.data.queries.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')
+          );
         }
         break;
 
@@ -188,12 +230,29 @@ export function useSearch(): UseSearchReturn {
         }
         break;
 
+      case 'follow_up':
+        if (event.data.questions) {
+          setFollowUpQuestions(event.data.questions as string[]);
+        }
+        break;
+
       case 'done':
         setStatus('complete');
         setStatusMessage('Research complete!');
         if (event.data.provider) {
           setProvider(event.data.provider);
         }
+        if (event.data.reflection_verdict) {
+          setReflectionVerdict(event.data.reflection_verdict);
+          addThinkingStep(
+            'verdict',
+            `Reflection: ${event.data.reflection_verdict}`,
+            event.data.reflection_verdict === 'PASS'
+              ? 'Response passed quality evaluation on first attempt.'
+              : 'Response was improved based on self-reflection feedback.'
+          );
+        }
+        addThinkingStep('done', 'Research Complete', `Synthesized from ${event.data.sources_count || 0} sources using ${event.data.provider || 'AI'}.`);
         break;
 
       case 'error':
@@ -218,6 +277,9 @@ export function useSearch(): UseSearchReturn {
     cooldown,
     provider,
     lastQuery,
+    reflectionVerdict,
+    thinkingSteps,
+    followUpQuestions,
     reset,
   };
 }

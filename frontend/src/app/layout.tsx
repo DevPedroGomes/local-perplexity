@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Local Searcher - AI-Powered Web Research",
+  title: "My Searcher - AI-Powered Web Research",
   description: "AI-powered research assistant that searches the web and synthesizes information from multiple sources into comprehensive answers with citations.",
 };
 
