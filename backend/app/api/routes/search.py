@@ -15,10 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 def _get_client_ip(request: Request) -> str:
-    """Extract real client IP, respecting X-Forwarded-For from Traefik."""
+    """Extract real client IP. Prefer x-real-ip (set by Traefik), fallback to last hop of x-forwarded-for."""
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        return forwarded.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
 
@@ -66,7 +69,7 @@ async def search(request: SearchRequest, req: Request):
         )
 
     # Get or create session
-    session_id = await session_manager.get_or_create_session(request.session_id)
+    session_id = await session_manager.get_or_create_session(request.session_id, client_ip=client_ip)
 
     if not session_id:
         raise HTTPException(
@@ -135,7 +138,7 @@ async def search_stream(request: SearchRequest, req: Request):
         )
 
     # Get or create session
-    session_id = await session_manager.get_or_create_session(request.session_id)
+    session_id = await session_manager.get_or_create_session(request.session_id, client_ip=client_ip)
 
     if not session_id:
         raise HTTPException(
@@ -190,8 +193,12 @@ async def search_stream(request: SearchRequest, req: Request):
 
 
 @router.get("/session/{session_id}")
-async def get_session(session_id: str):
+async def get_session(session_id: str, req: Request):
     """Get session information including rate limit status."""
+    client_ip = _get_client_ip(req)
+    if not await session_manager.validate_session_owner(session_id, client_ip):
+        raise HTTPException(status_code=403, detail="Access denied")
+
     session_info = await session_manager.get_session_info(session_id)
 
     if not session_info:
@@ -201,8 +208,12 @@ async def get_session(session_id: str):
 
 
 @router.delete("/session/{session_id}")
-async def delete_session(session_id: str):
+async def delete_session(session_id: str, req: Request):
     """Delete a session."""
+    client_ip = _get_client_ip(req)
+    if not await session_manager.validate_session_owner(session_id, client_ip):
+        raise HTTPException(status_code=403, detail="Access denied")
+
     deleted = await session_manager.delete_session(session_id)
 
     if not deleted:

@@ -9,7 +9,10 @@ This agent implements advanced RAG techniques:
 5. Enhanced Search: Multiple results per query for better coverage
 """
 
+import asyncio
 import logging
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, AsyncGenerator, Generator, Literal, Optional
 
 from pydantic import BaseModel
@@ -54,6 +57,7 @@ class LLMProvider:
         self._using_fallback = False
         self._fallback_call_count = 0
         self._retry_primary_after = 5
+        self._lock = threading.Lock()
         self._init_providers()
 
     def _init_providers(self):
@@ -105,18 +109,22 @@ class LLMProvider:
 
     def _try_recover_primary(self, messages: list) -> Optional[object]:
         """Try to return to primary LLM after fallback period. Returns result or None."""
-        if not (self._using_fallback and self._primary and self._fallback_call_count >= self._retry_primary_after):
+        with self._lock:
+            should_try = self._using_fallback and self._primary and self._fallback_call_count >= self._retry_primary_after
+        if not should_try:
             return None
         try:
             logger.info("Attempting to return to primary LLM...")
             result = self._primary.invoke(messages)
             logger.info("Successfully returned to primary LLM")
-            self._using_fallback = False
-            self._fallback_call_count = 0
+            with self._lock:
+                self._using_fallback = False
+                self._fallback_call_count = 0
             return result
         except Exception as e:
             logger.warning(f"Primary LLM still failing ({e}), continuing with fallback")
-            self._fallback_call_count = 0
+            with self._lock:
+                self._fallback_call_count = 0
             return None
 
     def invoke(self, prompt: str):
@@ -129,14 +137,17 @@ class LLMProvider:
 
         try:
             result = self.llm.invoke(messages)
-            if self._using_fallback:
-                self._fallback_call_count += 1
+            with self._lock:
+                if self._using_fallback:
+                    self._fallback_call_count += 1
             return result
         except Exception as e:
-            if not self._using_fallback and self._fallback:
-                logger.warning(f"Primary LLM failed ({e}), switching to fallback")
-                self._using_fallback = True
-                self._fallback_call_count = 1
+            with self._lock:
+                if not self._using_fallback and self._fallback:
+                    logger.warning(f"Primary LLM failed ({e}), switching to fallback")
+                    self._using_fallback = True
+                    self._fallback_call_count = 1
+            if self._fallback:
                 return self._fallback.invoke(messages)
             raise
 
@@ -145,28 +156,35 @@ class LLMProvider:
         messages = self._build_messages(prompt)
 
         # Try recovery to primary if in fallback mode
-        if self._using_fallback and self._primary and self._fallback_call_count >= self._retry_primary_after:
+        with self._lock:
+            should_try = self._using_fallback and self._primary and self._fallback_call_count >= self._retry_primary_after
+        if should_try:
             try:
                 logger.info("Attempting to return to primary LLM (structured)...")
                 result = self._primary.with_structured_output(schema).invoke(messages)
                 logger.info("Successfully returned to primary LLM")
-                self._using_fallback = False
-                self._fallback_call_count = 0
+                with self._lock:
+                    self._using_fallback = False
+                    self._fallback_call_count = 0
                 return result
             except Exception as e:
                 logger.warning(f"Primary LLM still failing ({e}), continuing with fallback")
-                self._fallback_call_count = 0
+                with self._lock:
+                    self._fallback_call_count = 0
 
         try:
             result = self.llm.with_structured_output(schema).invoke(messages)
-            if self._using_fallback:
-                self._fallback_call_count += 1
+            with self._lock:
+                if self._using_fallback:
+                    self._fallback_call_count += 1
             return result
         except Exception as e:
-            if not self._using_fallback and self._fallback:
-                logger.warning(f"Primary LLM failed ({e}) on structured output, switching to fallback")
-                self._using_fallback = True
-                self._fallback_call_count = 1
+            with self._lock:
+                if not self._using_fallback and self._fallback:
+                    logger.warning(f"Primary LLM failed ({e}) on structured output, switching to fallback")
+                    self._using_fallback = True
+                    self._fallback_call_count = 1
+            if self._fallback:
                 return self._fallback.with_structured_output(schema).invoke(messages)
             raise
 
@@ -177,13 +195,16 @@ class LLMProvider:
         try:
             for chunk in self.llm.stream(messages):
                 yield chunk
-            if self._using_fallback:
-                self._fallback_call_count += 1
+            with self._lock:
+                if self._using_fallback:
+                    self._fallback_call_count += 1
         except Exception as e:
-            if not self._using_fallback and self._fallback:
-                logger.warning(f"Primary LLM failed ({e}) during stream, switching to fallback")
-                self._using_fallback = True
-                self._fallback_call_count = 1
+            with self._lock:
+                if not self._using_fallback and self._fallback:
+                    logger.warning(f"Primary LLM failed ({e}) during stream, switching to fallback")
+                    self._using_fallback = True
+                    self._fallback_call_count = 1
+            if self._fallback:
                 for chunk in self._fallback.stream(messages):
                     yield chunk
             else:
@@ -406,6 +427,33 @@ class ResearchAgent:
             "provider": self.llm_provider.get_provider_name()
         }
 
+    async def _async_stream(self, prompt: str) -> AsyncGenerator[object, None]:
+        """Bridge sync LLM stream to async generator using a thread pool."""
+        loop = asyncio.get_event_loop()
+        queue: asyncio.Queue = asyncio.Queue()
+        executor = ThreadPoolExecutor(max_workers=1)
+
+        def _produce():
+            try:
+                for chunk in self.llm_provider.stream(prompt):
+                    loop.call_soon_threadsafe(queue.put_nowait, chunk)
+            except Exception as e:
+                loop.call_soon_threadsafe(queue.put_nowait, e)
+            finally:
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+
+        executor.submit(_produce)
+        try:
+            while True:
+                item = await queue.get()
+                if item is None:
+                    break
+                if isinstance(item, Exception):
+                    raise item
+                yield item
+        finally:
+            executor.shutdown(wait=False)
+
     async def search_stream(self, query: str) -> AsyncGenerator[dict, None]:
         """Execute a search with streaming updates including token-by-token response."""
         yield {
@@ -423,7 +471,7 @@ class ResearchAgent:
         state = ReportState(user_input=query)
 
         try:
-            queries_result = self._build_queries(state)
+            queries_result = await asyncio.to_thread(self._build_queries, state)
         except Exception as e:
             yield {"event": "error", "data": {"message": f"Failed to generate queries: {str(e)}"}}
             return
@@ -450,7 +498,7 @@ class ResearchAgent:
                 }
             }
 
-            results = self._execute_search(q, seen_urls)
+            results = await asyncio.to_thread(self._execute_search, q, seen_urls)
             for result in results:
                 all_results.append(result)
                 yield {
@@ -477,7 +525,7 @@ class ResearchAgent:
 
         try:
             draft_text = ""
-            for chunk in self.llm_provider.stream(synthesis_prompt):
+            async for chunk in self._async_stream(synthesis_prompt):
                 token = chunk.content if hasattr(chunk, 'content') else str(chunk)
                 if token:
                     draft_text += token
@@ -498,7 +546,7 @@ class ResearchAgent:
         yield {"event": "status", "data": {"message": "Evaluating response quality...", "step": "reflection"}}
 
         try:
-            reflect_result = self._self_reflect(state)
+            reflect_result = await asyncio.to_thread(self._self_reflect, state)
         except Exception as e:
             logger.warning(f"Self-reflection failed: {e}, using draft response")
             reflect_result = {"reflection_verdict": "PASS", "reflection_issues": "None", "iteration_count": 1}
@@ -523,7 +571,7 @@ class ResearchAgent:
                 )
 
                 improved_text = ""
-                for chunk in self.llm_provider.stream(improve_prompt):
+                async for chunk in self._async_stream(improve_prompt):
                     token = chunk.content if hasattr(chunk, 'content') else str(chunk)
                     if token:
                         improved_text += token

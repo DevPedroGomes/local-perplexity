@@ -30,29 +30,6 @@ information to answer this question. Each query should target a different aspect
 """
 
 
-# Source Summarization with relevance focus
-SUMMARIZE_SOURCE_PROMPT = """You are analyzing web content to extract information relevant to a research question.
-
-Research Question:
-<RESEARCH_QUESTION>
-{user_input}
-</RESEARCH_QUESTION>
-
-Web Content:
-<WEB_CONTENT>
-{web_search_results}
-</WEB_CONTENT>
-
-Your task:
-1. Identify the key facts, data, and claims in this content that relate to the research question.
-2. Note any statistics, dates, or specific details that could be cited.
-3. Ignore information that is not relevant to the question.
-4. Be concise but preserve important details.
-
-Provide a focused summary of the relevant information from this source.
-"""
-
-
 # Grounded Generation - Synthesis with source verification
 GROUNDED_SYNTHESIS_PROMPT = """You are writing a research response based on verified sources.
 
@@ -165,10 +142,3 @@ Generate 3 follow-up questions that:
 
 The questions should be specific, actionable, and different from the original question.
 """
-
-
-# Legacy prompt names for backward compatibility
-agent_prompt = SYSTEM_PROMPT
-build_queries_prompt = QUERY_GENERATION_PROMPT
-resume_search = SUMMARIZE_SOURCE_PROMPT
-build_final_response = GROUNDED_SYNTHESIS_PROMPT

@@ -7,21 +7,12 @@ from enum import Enum
 from app.core.config import settings
 
 
-class RateLimitError(Exception):
-    """Raised when rate limit is exceeded."""
-    pass
-
-
-class QuotaExceededError(Exception):
-    """Raised when session quota is exceeded."""
-    pass
-
-
 @dataclass
 class Session:
     session_id: str
     created_at: datetime
     last_activity: datetime
+    creator_ip: str = ""
     last_search_at: Optional[datetime] = None
     search_count: int = 0
     search_history: list = field(default_factory=list)
@@ -46,7 +37,7 @@ class SessionManager:
         self._max_searches_per_session = settings.MAX_SEARCHES_PER_SESSION
         self._min_seconds_between_searches = settings.MIN_SECONDS_BETWEEN_SEARCHES
 
-    async def create_session(self) -> Optional[str]:
+    async def create_session(self, client_ip: str = "") -> Optional[str]:
         """Create a new session if capacity allows."""
         async with self._lock:
             await self._cleanup_expired_sessions()
@@ -59,7 +50,8 @@ class SessionManager:
             self._sessions[session_id] = Session(
                 session_id=session_id,
                 created_at=now,
-                last_activity=now
+                last_activity=now,
+                creator_ip=client_ip,
             )
             return session_id
 
@@ -74,14 +66,24 @@ class SessionManager:
                 session.last_activity = datetime.utcnow()
             return session
 
-    async def get_or_create_session(self, session_id: Optional[str] = None) -> Optional[str]:
+    async def get_or_create_session(self, session_id: Optional[str] = None, client_ip: str = "") -> Optional[str]:
         """Get existing session or create new one."""
         if session_id:
             session = await self.get_session(session_id)
             if session:
                 return session_id
 
-        return await self.create_session()
+        return await self.create_session(client_ip=client_ip)
+
+    async def validate_session_owner(self, session_id: str, client_ip: str) -> bool:
+        """Validate that the requesting IP matches the session creator."""
+        async with self._lock:
+            session = self._sessions.get(session_id)
+            if not session:
+                return False
+            if not session.creator_ip:
+                return True
+            return session.creator_ip == client_ip
 
     async def check_rate_limit(self, session_id: str) -> Tuple[bool, Optional[str], Optional[int]]:
         """

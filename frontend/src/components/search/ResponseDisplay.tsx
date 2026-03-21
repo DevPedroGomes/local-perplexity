@@ -6,6 +6,9 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Bot, Sparkles } from 'lucide-react';
 import DOMPurify from 'dompurify';
+import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
+import type { Components } from 'react-markdown';
 
 interface ResponseDisplayProps {
   response: string;
@@ -13,92 +16,49 @@ interface ResponseDisplayProps {
   isComplete?: boolean;
 }
 
-// Sanitize text to prevent XSS attacks
-function sanitizeText(text: string): string {
-  return DOMPurify.sanitize(text, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
-}
-
 // Sanitize URL to prevent javascript: and data: URLs
 function sanitizeUrl(url: string): string {
   const sanitized = DOMPurify.sanitize(url, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
-  // Only allow http and https URLs
   if (sanitized.startsWith('http://') || sanitized.startsWith('https://')) {
     return sanitized;
   }
   return '#';
 }
 
-// Simple markdown-like rendering
-function renderContent(content: string) {
-  // Split by double newlines for paragraphs
-  const paragraphs = content.split(/\n\n+/);
-
-  return paragraphs.map((paragraph, idx) => {
-    // Check if it's a header
-    if (paragraph.startsWith('**References:**') || paragraph.startsWith('## References')) {
+// Custom components for ReactMarkdown
+const markdownComponents: Components = {
+  a: ({ href, children, ...props }) => (
+    <a
+      href={sanitizeUrl(href || '#')}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary hover:underline"
+      {...props}
+    >
+      {children}
+    </a>
+  ),
+  p: ({ children }) => {
+    // Handle citation badges [1], [2], etc. within paragraphs
+    if (typeof children === 'string') {
+      const parts = children.split(/(\[\d+\])/g);
       return (
-        <div key={idx} className="mt-6 pt-4 border-t">
-          <h4 className="font-semibold text-sm text-muted-foreground mb-2">References</h4>
-          <div className="text-sm space-y-1 text-muted-foreground">
-            {paragraph.replace(/^\*\*References:\*\*\n?|^## References\n?/, '').split('\n').map((ref, i) => (
-              <p key={i} className="break-words">
-                {renderInlineMarkdown(ref)}
-              </p>
-            ))}
-          </div>
-        </div>
+        <p className="text-foreground/90 leading-relaxed">
+          {parts.map((part, idx) =>
+            /^\[\d+\]$/.test(part) ? (
+              <Badge key={idx} variant="secondary" className="mx-0.5 text-xs font-normal">
+                {part}
+              </Badge>
+            ) : (
+              part
+            )
+          )}
+        </p>
       );
     }
-
-    // Regular paragraph
-    return (
-      <p key={idx} className="text-foreground/90 leading-relaxed">
-        {renderInlineMarkdown(paragraph)}
-      </p>
-    );
-  });
-}
-
-function renderInlineMarkdown(text: string) {
-  // Handle bold
-  const parts = text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\)|\[\d+\])/g);
-
-  return parts.map((part, idx) => {
-    // Bold text
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={idx}>{sanitizeText(part.slice(2, -2))}</strong>;
-    }
-
-    // Links - sanitize both text and URL to prevent XSS
-    const linkMatch = part.match(/\[([^\]]+)\]\(([^)]+)\)/);
-    if (linkMatch) {
-      const linkText = sanitizeText(linkMatch[1]);
-      const linkUrl = sanitizeUrl(linkMatch[2]);
-      return (
-        <a
-          key={idx}
-          href={linkUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          {linkText}
-        </a>
-      );
-    }
-
-    // Citations [1], [2], etc.
-    if (/^\[\d+\]$/.test(part)) {
-      return (
-        <Badge key={idx} variant="secondary" className="mx-0.5 text-xs font-normal">
-          {part}
-        </Badge>
-      );
-    }
-
-    return sanitizeText(part);
-  });
-}
+    return <p className="text-foreground/90 leading-relaxed">{children}</p>;
+  },
+};
 
 export function ResponseDisplay({ response, isLoading = false, isComplete = false }: ResponseDisplayProps) {
   if (!response && !isLoading) return null;
@@ -134,7 +94,12 @@ export function ResponseDisplay({ response, isLoading = false, isComplete = fals
           </div>
         ) : (
           <div className="prose prose-sm dark:prose-invert max-w-none space-y-4">
-            {renderContent(response)}
+            <ReactMarkdown
+              rehypePlugins={[rehypeSanitize]}
+              components={markdownComponents}
+            >
+              {response}
+            </ReactMarkdown>
           </div>
         )}
       </CardContent>

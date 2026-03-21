@@ -9,6 +9,15 @@ services:
       - .env
     environment:
       - ENV=production
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - proxy
       - internal
@@ -46,6 +55,15 @@ services:
         - NEXT_PUBLIC_API_URL=https://searcher.pgdev.com.br/api/v1
     container_name: searcher-frontend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - proxy
     labels:

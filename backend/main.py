@@ -58,8 +58,8 @@ app = FastAPI(
     """,
     version="2.0.0",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url="/docs" if settings.ENV == "development" else None,
+    redoc_url="/redoc" if settings.ENV == "development" else None
 )
 
 # CORS configuration - Only allow all origins in development
