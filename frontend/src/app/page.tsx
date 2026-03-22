@@ -11,9 +11,7 @@ import {
   ThinkingPanel,
   FollowUpQuestions,
 } from '@/components/search';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Sparkles, Github, ExternalLink, Clock, Zap, RotateCcw, Brain, Search, FileText, Eye, Wand2, Shield, ArrowRight } from 'lucide-react';
+import { Sparkles, Github, Clock, Zap, RotateCcw, Brain, Search, FileText, Eye, Wand2, Shield, ArrowRight } from 'lucide-react';
 
 export default function Home() {
   const {
@@ -40,56 +38,51 @@ export default function Home() {
   const hasResults = queries.length > 0 || sources.length > 0 || response;
 
   return (
-    <div className="min-h-screen bg-background relative flex flex-col">
-      {/* Background gradient */}
+    <div className="min-h-screen relative flex flex-col" style={{ background: '#0a0a0a' }}>
+      {/* Background effects */}
       <div className="fixed inset-0 gradient-bg pointer-events-none" />
+      <div className="fixed inset-0 grid-bg pointer-events-none" />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-primary" />
+      <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#0a0a0a]/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-12 max-w-4xl items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-lg bg-blue-400/10 flex items-center justify-center">
+              <Sparkles className="h-3.5 w-3.5 text-blue-400" />
             </div>
-            <span className="font-semibold">My Searcher</span>
-            <Badge variant="secondary" className="hidden sm:inline-flex text-xs">AI Powered</Badge>
+            <span className="text-sm font-semibold text-white">My Searcher</span>
             {provider && (
-              <Badge variant="outline" className="hidden sm:inline-flex text-xs bg-blue-500/10 text-blue-600 border-blue-500/20">
+              <span className="hidden sm:inline-flex text-[10px] text-blue-300/70 bg-blue-400/10 px-2 py-0.5 rounded-full font-medium">
                 {provider}
-              </Badge>
+              </span>
             )}
           </div>
-          <div className="flex items-center gap-3">
-            {/* Rate limit indicators */}
-            <div className="flex items-center gap-2 text-sm">
-              {cooldown > 0 && (
-                <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {cooldown}s
-                </Badge>
-              )}
-              <Badge
-                variant="outline"
-                className={`text-xs ${
-                  remainingSearches <= 0
-                    ? 'bg-red-500/10 text-red-600 border-red-500/20'
-                    : remainingSearches <= 2
-                    ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                    : 'bg-green-500/10 text-green-600 border-green-500/20'
-                }`}
-              >
-                <Zap className="h-3 w-3 mr-1" />
-                {remainingSearches}/5
-              </Badge>
-            </div>
+
+          <div className="flex items-center gap-2.5">
+            {cooldown > 0 && (
+              <span className="flex items-center gap-1 text-[11px] text-amber-400/70 bg-amber-400/10 px-2 py-1 rounded-full">
+                <Clock className="h-3 w-3" />
+                {cooldown}s
+              </span>
+            )}
+            <span className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-full font-medium ${
+              remainingSearches <= 0
+                ? 'text-red-400/70 bg-red-400/10'
+                : remainingSearches <= 2
+                ? 'text-amber-400/70 bg-amber-400/10'
+                : 'text-emerald-400/70 bg-emerald-400/10'
+            }`}>
+              <Zap className="h-3 w-3" />
+              {remainingSearches}/5
+            </span>
             <a
               href="https://github.com/DevPedroGomes/local-searcher"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-white/30 hover:text-white/60 transition-colors"
               aria-label="View source on GitHub"
             >
-              <Github className="h-5 w-5" />
+              <Github className="h-4 w-4" />
             </a>
           </div>
         </div>
@@ -97,148 +90,99 @@ export default function Home() {
 
       {/* Main content */}
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 sm:px-6 py-8">
-        {/* Hero section - shown when idle */}
+
+        {/* ======================== */}
+        {/* HERO — idle state only   */}
+        {/* ======================== */}
         {status === 'idle' && !response && (
-          <div className="flex flex-col items-center justify-center text-center space-y-6 animate-fade-in-up">
-            {/* Hero */}
-            <div className="space-y-4 pt-4">
-              <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-                <Sparkles className="h-8 w-8 text-primary" />
+          <div className="flex flex-col items-center justify-center text-center space-y-8 animate-fade-slide-in pt-8 sm:pt-16">
+            <div className="space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center mx-auto border-gradient">
+                <Sparkles className="h-7 w-7 text-blue-400" />
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
                 My Searcher
               </h1>
-              <p className="text-sm italic text-muted-foreground/70">
-                like Perplexity... but mine
+              <p className="text-sm italic text-white/30">like Perplexity... but mine</p>
+              <p className="text-base text-white/50 max-w-lg mx-auto leading-relaxed">
+                AI-powered research that searches the web and synthesizes citation-backed answers from multiple sources.
               </p>
-              <p className="text-base sm:text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
-                AI-powered research assistant that searches the web and synthesizes information from multiple sources into comprehensive, citation-backed answers.
-              </p>
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Badge variant="outline" className="font-normal">LangGraph</Badge>
-                <Badge variant="outline" className="font-normal">Groq</Badge>
-                <Badge variant="outline" className="font-normal">Tavily</Badge>
+              <div className="flex items-center justify-center gap-2">
+                {['LangGraph', 'Groq', 'Tavily'].map((tech) => (
+                  <span key={tech} className="text-[11px] text-white/40 bg-white/[0.04] border border-white/[0.08] rounded-full px-2.5 py-1 font-medium">
+                    {tech}
+                  </span>
+                ))}
               </div>
             </div>
 
-            {/* How It Works Section */}
-            <div className="w-full max-w-2xl space-y-4 pt-2">
-              <h2 className="text-lg font-semibold text-foreground">How the AI Works</h2>
-              <p className="text-sm text-muted-foreground max-w-lg mx-auto">
-                Every search triggers a 5-stage AI pipeline orchestrated by LangGraph, using advanced RAG (Retrieval-Augmented Generation) techniques:
-              </p>
-
-              {/* Pipeline Steps Explained */}
-              <div className="grid gap-3 text-left">
-                <div className="flex gap-3 p-3 rounded-xl border bg-card/50 backdrop-blur-sm">
-                  <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                    <Brain className="h-4 w-4 text-blue-500" />
+            {/* How it works — compact */}
+            <div className="w-full max-w-2xl space-y-4">
+              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">5-Stage AI Pipeline</h2>
+              <div className="grid gap-2">
+                {[
+                  { icon: Brain, label: 'Query Planning', desc: 'Decomposes your question into diverse search queries', color: 'blue' },
+                  { icon: Search, label: 'Web Search', desc: 'Parallel search across queries via Tavily API', color: 'amber' },
+                  { icon: FileText, label: 'Grounded Synthesis', desc: 'Citation-backed response with inline references', color: 'purple' },
+                  { icon: Eye, label: 'Self-Reflection', desc: 'Quality evaluation for completeness and accuracy', color: 'cyan' },
+                  { icon: Wand2, label: 'Improvement', desc: 'Conditional rewriting if issues are found', color: 'indigo' },
+                ].map((step, i) => (
+                  <div key={i} className="flex gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] border-gradient text-left">
+                    <div className={`h-8 w-8 rounded-lg bg-${step.color}-400/10 flex items-center justify-center shrink-0`}>
+                      <step.icon className={`h-4 w-4 text-${step.color}-400`} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-white/80">{i + 1}. {step.label}</h3>
+                      <p className="text-xs text-white/35 mt-0.5">{step.desc}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-foreground">1. Chain-of-Thought Query Planning</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      The LLM reasons step-by-step to decompose your question into 3-5 diverse search queries, covering different angles — factual, recent developments, and expert opinions.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 p-3 rounded-xl border bg-card/50 backdrop-blur-sm">
-                  <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-                    <Search className="h-4 w-4 text-amber-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-foreground">2. Parallel Web Search</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Each query searches the web via Tavily API, retrieving up to 5 results per query. Results are deduplicated by URL for broad, non-redundant coverage.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 p-3 rounded-xl border bg-card/50 backdrop-blur-sm">
-                  <div className="h-9 w-9 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
-                    <FileText className="h-4 w-4 text-purple-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-foreground">3. Grounded Synthesis</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      The response is generated with strict grounding rules — every claim must be backed by a source with inline citations [1], [2]. No hallucination allowed. Tokens stream in real-time.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 p-3 rounded-xl border bg-card/50 backdrop-blur-sm">
-                  <div className="h-9 w-9 rounded-lg bg-cyan-500/10 flex items-center justify-center shrink-0">
-                    <Eye className="h-4 w-4 text-cyan-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-foreground">4. Self-Reflection</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      The AI evaluates its own response for completeness, accuracy, citation quality, and clarity. It returns a PASS/NEEDS_IMPROVEMENT verdict using structured output.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 p-3 rounded-xl border bg-card/50 backdrop-blur-sm">
-                  <div className="h-9 w-9 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
-                    <Wand2 className="h-4 w-4 text-indigo-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-foreground">5. Conditional Improvement</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      If the reflection identifies issues, the response is rewritten once to fix them. If it passes, the response is finalized as-is. You can watch this happen live in the pipeline visualization above.
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
 
-              {/* Tech Highlights */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                <div className="p-3 rounded-xl border bg-card/50 text-center">
-                  <div className="text-2xl font-bold text-foreground">3-5</div>
-                  <div className="text-xs text-muted-foreground">LLM calls per search</div>
-                </div>
-                <div className="p-3 rounded-xl border bg-card/50 text-center">
-                  <div className="text-2xl font-bold text-foreground">~15</div>
-                  <div className="text-xs text-muted-foreground">sources analyzed</div>
-                </div>
-                <div className="p-3 rounded-xl border bg-card/50 text-center">
-                  <div className="text-2xl font-bold text-foreground">100%</div>
-                  <div className="text-xs text-muted-foreground">grounded in sources</div>
-                </div>
+              {/* Stats row */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: '3-5', label: 'LLM calls' },
+                  { value: '~15', label: 'sources' },
+                  { value: '100%', label: 'grounded' },
+                ].map((stat) => (
+                  <div key={stat.label} className="px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center border-gradient">
+                    <div className="text-lg font-semibold text-white tracking-tight">{stat.value}</div>
+                    <div className="text-[11px] text-white/35">{stat.label}</div>
+                  </div>
+                ))}
               </div>
 
-              {/* Security & Architecture badges */}
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                <Badge variant="outline" className="text-xs font-normal gap-1">
-                  <Shield className="h-3 w-3" />
-                  DOMPurify XSS Protection
-                </Badge>
-                <Badge variant="outline" className="text-xs font-normal gap-1">
-                  <Zap className="h-3 w-3" />
-                  Dual Rate Limiting
-                </Badge>
-                <Badge variant="outline" className="text-xs font-normal gap-1">
-                  <ArrowRight className="h-3 w-3" />
-                  Auto LLM Failover
-                </Badge>
+              {/* Security badges */}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {[
+                  { icon: Shield, label: 'XSS Protection' },
+                  { icon: Zap, label: 'Rate Limiting' },
+                  { icon: ArrowRight, label: 'LLM Failover' },
+                ].map((badge) => (
+                  <span key={badge.label} className="inline-flex items-center gap-1.5 text-[10px] text-white/30 bg-white/[0.03] border border-white/[0.06] rounded-full px-2.5 py-1">
+                    <badge.icon className="h-3 w-3" />
+                    {badge.label}
+                  </span>
+                ))}
               </div>
             </div>
 
-            {/* Demo Limits */}
-            <div className="p-4 rounded-lg bg-muted/50 border text-sm text-muted-foreground max-w-sm w-full">
-              <p className="font-medium text-foreground mb-2">Demo Limits</p>
-              <ul className="space-y-1 text-xs text-left">
-                <li>• Maximum 5 searches per session</li>
-                <li>• 10 second cooldown between searches</li>
-                <li>• Session expires after 30 minutes of inactivity</li>
-                <li>• IP-based rate limiting (15/hour) prevents abuse</li>
+            {/* Demo limits */}
+            <div className="px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs text-white/35 max-w-sm w-full text-left border-gradient">
+              <p className="font-medium text-white/50 mb-1.5">Demo Limits</p>
+              <ul className="space-y-0.5">
+                <li>5 searches per session / 10s cooldown</li>
+                <li>Session expires after 30 min / IP rate limiting</li>
               </ul>
             </div>
           </div>
         )}
 
-        {/* Search bar */}
-        <div className={`${status === 'idle' && !response ? 'max-w-2xl mx-auto' : 'max-w-3xl mx-auto mb-6'}`}>
+        {/* ======================== */}
+        {/* SEARCH BAR               */}
+        {/* ======================== */}
+        <div className={`transition-all duration-500 ${status === 'idle' && !response ? 'max-w-2xl mx-auto mt-6' : 'max-w-3xl mx-auto mb-5'}`}>
           <SearchBar
             onSearch={search}
             isLoading={isLoading}
@@ -248,90 +192,75 @@ export default function Home() {
                 ? "Search quota exceeded"
                 : cooldown > 0
                 ? `Wait ${cooldown}s...`
-                : "Ask anything... (e.g., What are the latest developments in AI?)"
+                : "Ask anything..."
             }
           />
 
-          {/* Cooldown/quota message below search */}
           {(cooldown > 0 || remainingSearches <= 0) && !isLoading && (
-            <p className="text-center text-sm text-muted-foreground mt-2">
+            <p className="text-center text-xs text-white/30 mt-2">
               {remainingSearches <= 0
-                ? "You've used all 5 searches. Refresh the page to start a new session."
-                : `Please wait ${cooldown} seconds before your next search.`}
+                ? "All 5 searches used. Refresh for a new session."
+                : `Wait ${cooldown}s before next search.`}
             </p>
           )}
         </div>
 
-        {/* Pipeline Visualization — shows during active search */}
-        {(isLoading || status === 'complete') && (
-          <div className="mb-6 max-w-3xl mx-auto">
+        {/* ======================== */}
+        {/* RESULTS AREA              */}
+        {/* ======================== */}
+        {(hasResults || isLoading) && (
+          <div className="space-y-4 max-w-3xl mx-auto">
+
+            {/* Pipeline — compact inline bar */}
             <PipelineVisualization status={status} reflectionVerdict={reflectionVerdict} />
-          </div>
-        )}
 
-        {/* Thinking Panel — collapsible reasoning trace */}
-        {thinkingSteps.length > 0 && (
-          <div className="mb-6 max-w-3xl mx-auto">
-            <ThinkingPanel steps={thinkingSteps} isActive={isLoading} />
-          </div>
-        )}
+            {/* Thinking — collapsible */}
+            {thinkingSteps.length > 0 && (
+              <ThinkingPanel steps={thinkingSteps} isActive={isLoading} />
+            )}
 
-        {/* Status indicator */}
-        {status !== 'idle' && (
-          <div className="mb-6 max-w-3xl mx-auto">
-            <SearchStatusIndicator
-              status={status}
-              message={statusMessage}
-              progress={progress}
-            />
-          </div>
-        )}
+            {/* Status */}
+            {status !== 'idle' && status !== 'complete' && (
+              <SearchStatusIndicator status={status} message={statusMessage} progress={progress} />
+            )}
 
-        {/* Error display with retry button */}
-        {error && (
-          <div className="mb-6 max-w-3xl mx-auto p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-medium">
-                  {status === 'rate-limited' ? 'Rate Limited' : status === 'quota-exceeded' ? 'Quota Exceeded' : 'Error'}
-                </p>
-                <p className="text-sm">{error}</p>
+            {/* Error */}
+            {error && (
+              <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/15 animate-fade-in-up">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-red-400">
+                      {status === 'rate-limited' ? 'Rate Limited' : status === 'quota-exceeded' ? 'Quota Exceeded' : 'Error'}
+                    </p>
+                    <p className="text-xs text-red-400/70 mt-0.5">{error}</p>
+                  </div>
+                  {status === 'error' && lastQuery && remainingSearches > 0 && cooldown === 0 && (
+                    <button
+                      onClick={retry}
+                      className="shrink-0 flex items-center gap-1.5 text-xs text-red-400 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Retry
+                    </button>
+                  )}
+                </div>
               </div>
-              {status === 'error' && lastQuery && remainingSearches > 0 && cooldown === 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={retry}
-                  className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/10"
-                >
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Try Again
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* Results section */}
-        {hasResults && (
-          <div className="space-y-6 animate-fade-in-up max-w-3xl mx-auto">
-            {/* Queries */}
+            {/* Sources — horizontal scrollable */}
+            <SourcesList sources={sources} isLoading={status === 'searching'} />
+
+            {/* Queries — compact chips */}
             <QueriesList queries={queries} />
 
-            {/* Sources */}
-            <SourcesList
-              sources={sources}
-              isLoading={status === 'searching'}
-            />
-
-            {/* Response */}
+            {/* Response — main glass card */}
             <ResponseDisplay
               response={response}
               isLoading={['synthesizing', 'improving'].includes(status) && response.length === 0}
               isComplete={status === 'complete'}
             />
 
-            {/* Follow-up Questions */}
+            {/* Follow-up questions */}
             {status === 'complete' && (
               <FollowUpQuestions
                 questions={followUpQuestions}
@@ -342,42 +271,29 @@ export default function Home() {
           </div>
         )}
 
-        {/* Footer hint */}
+        {/* Footer hint — idle only */}
         {status === 'idle' && !response && (
           <div className="mt-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              Built with{' '}
-              <a href="https://nextjs.org" target="_blank" rel="noopener noreferrer" className="text-foreground hover:underline">
-                Next.js
-              </a>
-              {', '}
-              <a href="https://ui.shadcn.com" target="_blank" rel="noopener noreferrer" className="text-foreground hover:underline">
-                shadcn/ui
-              </a>
-              {', and '}
-              <a href="https://www.langchain.com/langgraph" target="_blank" rel="noopener noreferrer" className="text-foreground hover:underline">
-                LangGraph
-              </a>
+            <p className="text-xs text-white/20">
+              Built with Next.js, shadcn/ui, and LangGraph
             </p>
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-6">
+      <footer className="border-t border-white/[0.06] py-4">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>My Searcher - AI-Powered Research</p>
-            <div className="flex items-center gap-4">
-              <a
-                href="https://github.com/DevPedroGomes"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-foreground transition-colors flex items-center gap-1"
-              >
-                Portfolio <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
+          <div className="flex items-center justify-between text-[11px] text-white/25">
+            <span>My Searcher - AI Research</span>
+            <a
+              href="https://github.com/DevPedroGomes"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white/50 transition-colors"
+            >
+              Portfolio
+            </a>
           </div>
         </div>
       </footer>

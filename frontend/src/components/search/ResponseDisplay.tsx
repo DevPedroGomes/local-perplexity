@@ -1,10 +1,7 @@
 'use client';
 
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Bot, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
@@ -16,7 +13,6 @@ interface ResponseDisplayProps {
   isComplete?: boolean;
 }
 
-// Sanitize URL to prevent javascript: and data: URLs
 function sanitizeUrl(url: string): string {
   const sanitized = DOMPurify.sanitize(url, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
   if (sanitized.startsWith('http://') || sanitized.startsWith('https://')) {
@@ -25,30 +21,28 @@ function sanitizeUrl(url: string): string {
   return '#';
 }
 
-// Custom components for ReactMarkdown
 const markdownComponents: Components = {
   a: ({ href, children, ...props }) => (
     <a
       href={sanitizeUrl(href || '#')}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-primary hover:underline"
+      className="text-blue-400 hover:text-blue-300 hover:underline transition-colors"
       {...props}
     >
       {children}
     </a>
   ),
   p: ({ children }) => {
-    // Handle citation badges [1], [2], etc. within paragraphs
     if (typeof children === 'string') {
       const parts = children.split(/(\[\d+\])/g);
       return (
-        <p className="text-foreground/90 leading-relaxed">
+        <p>
           {parts.map((part, idx) =>
             /^\[\d+\]$/.test(part) ? (
-              <Badge key={idx} variant="secondary" className="mx-0.5 text-xs font-normal">
+              <span key={idx} className="inline-flex items-center justify-center h-4 min-w-[18px] px-1 rounded bg-blue-400/15 text-blue-300 text-[10px] font-semibold mx-0.5 align-text-top">
                 {part}
-              </Badge>
+              </span>
             ) : (
               part
             )
@@ -56,7 +50,7 @@ const markdownComponents: Components = {
         </p>
       );
     }
-    return <p className="text-foreground/90 leading-relaxed">{children}</p>;
+    return <p>{children}</p>;
   },
 };
 
@@ -64,36 +58,37 @@ export function ResponseDisplay({ response, isLoading = false, isComplete = fals
   if (!response && !isLoading) return null;
 
   return (
-    <Card className="overflow-hidden border-2 bg-gradient-to-br from-card to-card/50">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Bot className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-sm">AI Response</h3>
-            <p className="text-xs text-muted-foreground">Synthesized from multiple sources</p>
-          </div>
-          {isComplete && response && (
-            <Badge variant="outline" className="ml-auto text-xs">
-              <Sparkles className="h-3 w-3 mr-1" />
-              Complete
-            </Badge>
-          )}
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] border-gradient overflow-hidden animate-fade-in-up">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-5 py-3 border-b border-white/[0.06]">
+        <div className="h-7 w-7 rounded-lg bg-blue-400/15 flex items-center justify-center">
+          <Sparkles className="h-3.5 w-3.5 text-blue-400" />
         </div>
-      </CardHeader>
-      <Separator />
-      <CardContent className="pt-4">
+        <span className="text-sm font-medium text-white/80">Answer</span>
+        {isComplete && response && (
+          <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-400/80 font-medium">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Complete
+          </span>
+        )}
+        {!isComplete && response && (
+          <span className="ml-auto flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+            <span className="text-[10px] text-blue-400/80 font-medium">Streaming...</span>
+          </span>
+        )}
+      </div>
+
+      {/* Content with internal scroll */}
+      <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
         {isLoading ? (
           <div className="space-y-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className={`h-3.5 rounded bg-white/[0.04] animate-pulse`} style={{ width: `${85 - i * 10}%` }} />
+            ))}
           </div>
         ) : (
-          <div className="prose prose-sm dark:prose-invert max-w-none space-y-4">
+          <div className="prose-fluxora text-sm">
             <ReactMarkdown
               rehypePlugins={[rehypeSanitize]}
               components={markdownComponents}
@@ -102,7 +97,7 @@ export function ResponseDisplay({ response, isLoading = false, isComplete = fals
             </ReactMarkdown>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
