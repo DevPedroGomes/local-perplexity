@@ -169,12 +169,18 @@ async def search_stream(request: SearchRequest, req: Request):
         # Get session info for limits
         session_info = await session_manager.get_session_info(session_id)
         remaining = session_info.get("remaining_searches", 0) if session_info else 0
+        start_time = time.time()
+        max_duration = 300  # 5 minute hard limit
 
         # Send session ID and limits first
         yield f"data: {json.dumps({'event': 'session', 'data': {'session_id': session_id, 'remaining_searches': remaining}})}\n\n"
 
         try:
             async for event in agent.search_stream(request.query):
+                if time.time() - start_time > max_duration:
+                    logger.warning(f"Stream timeout for session {session_id}")
+                    yield f"data: {json.dumps({'event': 'error', 'data': {'message': 'Search timed out. Please try a simpler query.'}})}\n\n"
+                    break
                 yield f"data: {json.dumps(event)}\n\n"
 
         except Exception as e:
