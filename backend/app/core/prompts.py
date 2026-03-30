@@ -5,7 +5,14 @@ Prompts for the Research Agent with Chain-of-Thought reasoning.
 # Base system prompt
 SYSTEM_PROMPT = """You are an expert research assistant. Your goal is to provide accurate,
 well-sourced information based on web search results. Always prioritize factual accuracy
-and cite your sources."""
+and cite your sources.
+
+CRITICAL RULE: Your training data may be outdated. When web search results contain information
+that differs from your training knowledge, ALWAYS trust the web sources over your own knowledge.
+The web sources are current and authoritative — your training data is not.
+
+When sources include publication dates, use them to determine recency. Newer information
+ALWAYS takes precedence over older information or your own training knowledge."""
 
 
 # Chain-of-Thought Query Generation
@@ -18,7 +25,8 @@ Think step by step:
 2. IDENTIFY: What are the key concepts, entities, and terms?
 3. CONSIDER: What different angles or aspects could help answer this comprehensively?
 4. DIVERSIFY: Ensure queries cover different facets (facts, recent developments, expert opinions).
-5. FORMULATE: Write clear, specific, and searchable queries.
+5. RECENCY: For topics about news, updates, or "latest" information, include at least one query with a recent date qualifier (e.g., "2026", "March 2026", "latest").
+6. FORMULATE: Write clear, specific, and searchable queries.
 
 User Question:
 <USER_QUESTION>
@@ -38,7 +46,7 @@ User Question:
 {user_input}
 </USER_QUESTION>
 
-Available Sources:
+Available Sources (sorted by publication date, newest first):
 <SOURCES>
 {search_results}
 </SOURCES>
@@ -47,8 +55,10 @@ IMPORTANT RULES:
 1. ONLY include information that is directly supported by the sources above.
 2. Add citation numbers [1], [2], etc. immediately after each claim that comes from a source.
 3. If you cannot find support for a claim in the sources, DO NOT include it.
-4. If sources conflict, mention the disagreement.
+4. If sources conflict, ALWAYS prefer the most recently published source and note when older sources provide outdated information.
 5. Be comprehensive but factual - aim for 400-600 words.
+6. NEVER rely on your training knowledge — if the sources say something different from what you know, trust the sources.
+7. When sources include publication dates, mention them when relevant (e.g., "According to a March 2026 report [1]...").
 
 Structure your response with:
 - A clear introduction addressing the question
@@ -84,6 +94,7 @@ Evaluate the response by checking:
 3. CITATIONS: Are citations properly placed after claims?
 4. CLARITY: Is it well-structured and easy to understand?
 5. GAPS: Is there important information from the sources that was missed?
+6. CURRENCY: For questions about recent events or "latest" developments, does the response cite the MOST RECENT sources? If newer sources exist but the response cites older ones, this is a significant quality issue.
 
 Based on your evaluation, provide your verdict as PASS if the response is good quality, or NEEDS_IMPROVEMENT if it has significant issues. If NEEDS_IMPROVEMENT, list the specific issues to fix.
 """
@@ -116,6 +127,8 @@ Rewrite the response to address these issues. Remember:
 - Only include information supported by the sources
 - Add proper citations [1], [2], etc.
 - Maintain good structure and clarity
+- Prefer the most recently published sources when information conflicts
+- NEVER use your training knowledge — trust only the sources above
 - Aim for 400-600 words
 
 Improved response:

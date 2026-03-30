@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useEffect } from 'react';
 import { useSearch } from '@/hooks/useSearch';
 import {
   SearchBar,
@@ -36,6 +37,16 @@ export default function Home() {
   const isLoading = ['generating-queries', 'searching', 'synthesizing', 'reflecting', 'improving'].includes(status);
   const isDisabled = isLoading || cooldown > 0 || remainingSearches <= 0;
   const hasResults = queries.length > 0 || sources.length > 0 || response;
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to results when search starts
+  useEffect(() => {
+    if (isLoading && resultsRef.current) {
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
+  }, [isLoading]);
 
   return (
     <div className="min-h-screen relative flex flex-col" style={{ background: '#0a0a0a' }}>
@@ -47,9 +58,7 @@ export default function Home() {
       <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#0a0a0a]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-12 max-w-4xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 rounded-lg bg-blue-400/10 flex items-center justify-center">
-              <Sparkles className="h-3.5 w-3.5 text-blue-400" />
-            </div>
+            <img src="/logo.png" alt="Logo" className="h-7 w-7 rounded-lg object-cover" />
             <span className="text-sm font-semibold text-white">My Searcher</span>
             {provider && (
               <span className="hidden sm:inline-flex text-[10px] text-blue-300/70 bg-blue-400/10 px-2 py-0.5 rounded-full font-medium">
@@ -209,7 +218,7 @@ export default function Home() {
         {/* RESULTS AREA              */}
         {/* ======================== */}
         {(hasResults || isLoading) && (
-          <div className="space-y-4 max-w-3xl mx-auto">
+          <div ref={resultsRef} className="space-y-4 max-w-3xl mx-auto">
 
             {/* Pipeline — compact inline bar */}
             <PipelineVisualization status={status} reflectionVerdict={reflectionVerdict} />
@@ -259,6 +268,16 @@ export default function Home() {
               isLoading={['synthesizing', 'improving'].includes(status) && response.length === 0}
               isComplete={status === 'complete'}
             />
+
+            {/* Empty results */}
+            {status === 'complete' && sources.length === 0 && !response && (
+              <div className="flex flex-col items-center justify-center py-12 animate-fade-in-up">
+                <Search className="h-10 w-10 text-white/20 mb-4" />
+                <p className="text-center text-white/40 text-sm">
+                  Nenhum resultado encontrado. Tente reformular sua pergunta.
+                </p>
+              </div>
+            )}
 
             {/* Follow-up questions */}
             {status === 'complete' && (

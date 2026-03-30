@@ -10,6 +10,7 @@ class QueryResult(BaseModel):
     title: str = ""
     url: str = ""
     resume: str = ""
+    published_date: Optional[str] = None
 
 
 class ReflectionResult(BaseModel):

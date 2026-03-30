@@ -15,10 +15,15 @@ export async function searchQuery(query: string, sessionId?: string): Promise<Se
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    const detail = error.detail;
-    const message = typeof detail === 'object' ? detail.message : detail;
-    throw new Error(message || 'Search failed');
+    let message = 'Search failed';
+    try {
+      const error = await response.json();
+      const detail = error.detail;
+      message = (typeof detail === 'object' ? detail.message : detail) || 'Search failed';
+    } catch {
+      message = response.statusText || 'Search failed';
+    }
+    throw new Error(message);
   }
 
   return response.json();
@@ -53,6 +58,7 @@ export async function* searchQueryStream(
 
   const decoder = new TextDecoder();
   let buffer = '';
+  let consecutiveParseFailures = 0;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -66,9 +72,13 @@ export async function* searchQueryStream(
       if (line.startsWith('data: ')) {
         try {
           const data = JSON.parse(line.slice(6));
+          consecutiveParseFailures = 0;
           yield data as StreamEvent;
         } catch {
-          // Skip invalid JSON
+          consecutiveParseFailures++;
+          if (consecutiveParseFailures > 10) {
+            throw new Error('Stream corrupted: too many consecutive JSON parse failures');
+          }
         }
       }
     }

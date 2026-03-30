@@ -293,7 +293,7 @@ class ResearchAgent:
         return {"queries": result.queries}
 
     def _search_all(self, state: ReportState) -> dict:
-        """Execute all searches and collect multiple results per query."""
+        """Execute all searches, collect results, and sort by recency."""
         all_results = []
         seen_urls = set()
 
@@ -301,17 +301,32 @@ class ResearchAgent:
             results = self._execute_search(query, seen_urls)
             all_results.extend(results)
 
+        # Sort by publish date (newest first) — sources without dates go last
+        all_results.sort(
+            key=lambda r: r.published_date or "",
+            reverse=True
+        )
+
         return {"queries_results": all_results}
 
+    def _detect_news_topic(self, query: str) -> bool:
+        """Detect if query is about recent events/news."""
+        news_keywords = ['latest', 'recent', 'new', 'news', 'update', 'release', 'announce', 'launch', 'today', '2026', '2025']
+        query_lower = query.lower()
+        return any(kw in query_lower for kw in news_keywords)
+
     def _execute_search(self, query: str, seen_urls: set) -> List[QueryResult]:
-        """Execute a search and return multiple results."""
+        """Execute a search and return multiple results with date metadata."""
         results_list = []
 
         try:
+            is_news = self._detect_news_topic(query)
             search_results = self.tavily_client.search(
                 query,
                 max_results=self.max_results_per_query,
                 include_raw_content=False,
+                search_depth="advanced",
+                topic="news" if is_news else "general",
             )
 
             if not search_results.get("results"):
@@ -326,11 +341,13 @@ class ResearchAgent:
 
                 title = result.get("title", "Untitled")
                 content = result.get("content", "")
+                published_date = result.get("published_date") or result.get("publishedDate")
 
                 results_list.append(QueryResult(
                     title=title,
                     url=url,
                     resume=content if content else "No content available",
+                    published_date=published_date,
                 ))
 
         except Exception as e:
@@ -401,11 +418,13 @@ class ResearchAgent:
         return {"final_response": final_response}
 
     def _format_sources(self, results: List[QueryResult]) -> str:
-        """Format sources for prompts."""
+        """Format sources for prompts, including publication dates for recency context."""
         formatted = ""
         for i, result in enumerate(results):
             formatted += f"[{i + 1}] {result.title}\n"
             formatted += f"URL: {result.url}\n"
+            if result.published_date:
+                formatted += f"Published: {result.published_date}\n"
             formatted += f"Content: {result.resume}\n"
             formatted += "---\n\n"
         return formatted
@@ -513,6 +532,9 @@ class ResearchAgent:
         if not all_results:
             yield {"event": "error", "data": {"message": "No search results found. Please try a different query."}}
             return
+
+        # Sort by recency (newest first) for consistent citation ordering
+        all_results.sort(key=lambda r: r.published_date or "", reverse=True)
 
         # Grounded synthesis — stream tokens
         yield {"event": "status", "data": {"message": "Synthesizing with source verification...", "step": "synthesis"}}
