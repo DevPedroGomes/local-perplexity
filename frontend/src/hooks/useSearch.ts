@@ -6,6 +6,7 @@ import { Source, SearchStatus, StreamEvent } from '@/types';
 
 const MAX_SEARCHES = 5;
 const COOLDOWN_SECONDS = 10;
+const SESSION_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour client-side (server is source of truth)
 
 export interface ThinkingStep {
   id: string;
@@ -54,28 +55,45 @@ export function useSearch(): UseSearchReturn {
 
   // Load session from localStorage and sync with backend
   useEffect(() => {
-    const stored = localStorage.getItem('research_session_id');
-    if (stored) {
-      setSessionId(stored);
-      getSession(stored).then((info) => {
-        if (info) {
-          setRemainingSearches(info.remaining_searches);
-          if (info.cooldown_remaining > 0) {
-            setCooldown(info.cooldown_remaining);
-          }
-        } else {
-          localStorage.removeItem('research_session_id');
+    const raw = localStorage.getItem('research_session');
+    if (raw) {
+      try {
+        const { id, ts } = JSON.parse(raw);
+        if (Date.now() - ts > SESSION_MAX_AGE_MS) {
+          // Session too old — discard silently, no backend call
+          localStorage.removeItem('research_session');
+          return;
         }
-      }).catch(() => {
-        localStorage.removeItem('research_session_id');
-      });
+        setSessionId(id);
+        getSession(id).then((info) => {
+          if (info) {
+            setRemainingSearches(info.remaining_searches);
+            if (info.cooldown_remaining > 0) {
+              setCooldown(info.cooldown_remaining);
+            }
+            // Refresh timestamp on successful server validation
+            localStorage.setItem('research_session', JSON.stringify({ id, ts: Date.now() }));
+          } else {
+            localStorage.removeItem('research_session');
+            setSessionId(null);
+          }
+        }).catch(() => {
+          localStorage.removeItem('research_session');
+          setSessionId(null);
+        });
+      } catch {
+        localStorage.removeItem('research_session');
+      }
     }
+    // Migrate legacy key
+    const legacy = localStorage.getItem('research_session_id');
+    if (legacy) localStorage.removeItem('research_session_id');
   }, []);
 
-  // Save session to localStorage
+  // Save session to localStorage with timestamp
   useEffect(() => {
     if (sessionId) {
-      localStorage.setItem('research_session_id', sessionId);
+      localStorage.setItem('research_session', JSON.stringify({ id: sessionId, ts: Date.now() }));
     }
   }, [sessionId]);
 
