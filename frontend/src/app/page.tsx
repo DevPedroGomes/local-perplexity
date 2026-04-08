@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from 'react';
 import { useSearch } from '@/hooks/useSearch';
+import { useLocale } from '@/hooks/use-locale';
 import {
   SearchBar,
   SearchStatusIndicator,
@@ -34,6 +35,8 @@ export default function Home() {
     followUpQuestions,
   } = useSearch();
 
+  const { locale, toggleLocale, t } = useLocale();
+
   const isLoading = ['generating-queries', 'searching', 'synthesizing', 'reflecting', 'improving'].includes(status);
   const isDisabled = isLoading || cooldown > 0 || remainingSearches <= 0;
   const hasResults = queries.length > 0 || sources.length > 0 || response;
@@ -59,7 +62,7 @@ export default function Home() {
         <div className="mx-auto flex h-12 max-w-4xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Logo" className="h-7 w-7 rounded-lg object-cover" />
-            <span className="text-sm font-semibold text-white">My Searcher</span>
+            <span className="text-sm font-semibold text-white">{t('header.title')}</span>
             {provider && (
               <span className="hidden sm:inline-flex text-[10px] text-blue-300/70 bg-blue-400/10 px-2 py-0.5 rounded-full font-medium">
                 {provider}
@@ -68,6 +71,16 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {/* Language toggle */}
+            <button
+              onClick={toggleLocale}
+              className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-full bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] transition-colors"
+            >
+              <span className={locale === 'en' ? 'text-white/90' : 'text-white/35'}>EN</span>
+              <span className="text-white/20">|</span>
+              <span className={locale === 'pt' ? 'text-white/90' : 'text-white/35'}>PT</span>
+            </button>
+
             {cooldown > 0 && (
               <span className="flex items-center gap-1 text-[11px] text-amber-400/70 bg-amber-400/10 px-2 py-1 rounded-full">
                 <Clock className="h-3 w-3" />
@@ -89,7 +102,7 @@ export default function Home() {
               target="_blank"
               rel="noopener noreferrer"
               className="text-white/30 hover:text-white/60 transition-colors"
-              aria-label="View source on GitHub"
+              aria-label={t('header.github.aria')}
             >
               <Github className="h-4 w-4" />
             </a>
@@ -110,11 +123,11 @@ export default function Home() {
                 <Sparkles className="h-7 w-7 text-blue-400" />
               </div>
               <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
-                My Searcher
+                {t('hero.title')}
               </h1>
-              <p className="text-sm italic text-white/30">like Perplexity... but mine</p>
+              <p className="text-sm italic text-white/30">{t('hero.subtitle')}</p>
               <p className="text-base text-white/50 max-w-lg mx-auto leading-relaxed">
-                AI-powered research that searches the web and synthesizes citation-backed answers from multiple sources.
+                {t('hero.description')}
               </p>
               <div className="flex items-center justify-center gap-2">
                 {['LangGraph', 'Groq', 'Tavily'].map((tech) => (
@@ -127,14 +140,14 @@ export default function Home() {
 
             {/* How it works — compact */}
             <div className="w-full max-w-2xl space-y-4">
-              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">5-Stage AI Pipeline</h2>
+              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">{t('pipeline.heading')}</h2>
               <div className="grid gap-2">
                 {[
-                  { icon: Brain, label: 'Query Planning', desc: 'Decomposes your question into diverse search queries', color: 'blue' },
-                  { icon: Search, label: 'Web Search', desc: 'Parallel search across queries via Tavily API', color: 'amber' },
-                  { icon: FileText, label: 'Grounded Synthesis', desc: 'Citation-backed response with inline references', color: 'purple' },
-                  { icon: Eye, label: 'Self-Reflection', desc: 'Quality evaluation for completeness and accuracy', color: 'cyan' },
-                  { icon: Wand2, label: 'Improvement', desc: 'Conditional rewriting if issues are found', color: 'indigo' },
+                  { icon: Brain, label: t('pipeline.step1.label'), desc: t('pipeline.step1.desc'), color: 'blue' },
+                  { icon: Search, label: t('pipeline.step2.label'), desc: t('pipeline.step2.desc'), color: 'amber' },
+                  { icon: FileText, label: t('pipeline.step3.label'), desc: t('pipeline.step3.desc'), color: 'purple' },
+                  { icon: Eye, label: t('pipeline.step4.label'), desc: t('pipeline.step4.desc'), color: 'cyan' },
+                  { icon: Wand2, label: t('pipeline.step5.label'), desc: t('pipeline.step5.desc'), color: 'indigo' },
                 ].map((step, i) => (
                   <div key={i} className="flex gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] border-gradient text-left">
                     <div className={`h-8 w-8 rounded-lg bg-${step.color}-400/10 flex items-center justify-center shrink-0`}>
@@ -151,9 +164,9 @@ export default function Home() {
               {/* Stats row */}
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { value: '3-5', label: 'LLM calls' },
-                  { value: '~15', label: 'sources' },
-                  { value: '100%', label: 'grounded' },
+                  { value: t('stats.llmCalls.value'), label: t('stats.llmCalls.label') },
+                  { value: t('stats.sources.value'), label: t('stats.sources.label') },
+                  { value: t('stats.grounded.value'), label: t('stats.grounded.label') },
                 ].map((stat) => (
                   <div key={stat.label} className="px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center border-gradient">
                     <div className="text-lg font-semibold text-white tracking-tight">{stat.value}</div>
@@ -165,9 +178,9 @@ export default function Home() {
               {/* Security badges */}
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {[
-                  { icon: Shield, label: 'XSS Protection' },
-                  { icon: Zap, label: 'Rate Limiting' },
-                  { icon: ArrowRight, label: 'LLM Failover' },
+                  { icon: Shield, label: t('badge.xss') },
+                  { icon: Zap, label: t('badge.rateLimit') },
+                  { icon: ArrowRight, label: t('badge.failover') },
                 ].map((badge) => (
                   <span key={badge.label} className="inline-flex items-center gap-1.5 text-[10px] text-white/30 bg-white/[0.03] border border-white/[0.06] rounded-full px-2.5 py-1">
                     <badge.icon className="h-3 w-3" />
@@ -179,10 +192,10 @@ export default function Home() {
 
             {/* Demo limits */}
             <div className="px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs text-white/35 max-w-sm w-full text-left border-gradient">
-              <p className="font-medium text-white/50 mb-1.5">Demo Limits</p>
+              <p className="font-medium text-white/50 mb-1.5">{t('demo.title')}</p>
               <ul className="space-y-0.5">
-                <li>5 searches per session / 10s cooldown</li>
-                <li>Session expires after 30 min / IP rate limiting</li>
+                <li>{t('demo.line1')}</li>
+                <li>{t('demo.line2')}</li>
               </ul>
             </div>
           </div>
@@ -198,18 +211,18 @@ export default function Home() {
             disabled={isDisabled}
             placeholder={
               remainingSearches <= 0
-                ? "Search quota exceeded"
+                ? t('search.quotaExceeded')
                 : cooldown > 0
-                ? `Wait ${cooldown}s...`
-                : "Ask anything..."
+                ? t('search.waitCooldown', { seconds: cooldown })
+                : t('search.placeholder')
             }
           />
 
           {(cooldown > 0 || remainingSearches <= 0) && !isLoading && (
             <p className="text-center text-xs text-white/30 mt-2">
               {remainingSearches <= 0
-                ? "All 5 searches used. Refresh for a new session."
-                : `Wait ${cooldown}s before next search.`}
+                ? t('search.allUsed')
+                : t('search.waitMessage', { seconds: cooldown })}
             </p>
           )}
         </div>
@@ -239,7 +252,7 @@ export default function Home() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-medium text-red-400">
-                      {status === 'rate-limited' ? 'Rate Limited' : status === 'quota-exceeded' ? 'Quota Exceeded' : 'Error'}
+                      {status === 'rate-limited' ? t('error.rateLimited') : status === 'quota-exceeded' ? t('error.quotaExceeded') : t('error.generic')}
                     </p>
                     <p className="text-xs text-red-400/70 mt-0.5">{error}</p>
                   </div>
@@ -249,7 +262,7 @@ export default function Home() {
                       className="shrink-0 flex items-center gap-1.5 text-xs text-red-400 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg transition-colors"
                     >
                       <RotateCcw className="h-3 w-3" />
-                      Retry
+                      {t('error.retry')}
                     </button>
                   )}
                 </div>
@@ -274,7 +287,7 @@ export default function Home() {
               <div className="flex flex-col items-center justify-center py-12 animate-fade-in-up">
                 <Search className="h-10 w-10 text-white/20 mb-4" />
                 <p className="text-center text-white/40 text-sm">
-                  Nenhum resultado encontrado. Tente reformular sua pergunta.
+                  {t('results.empty')}
                 </p>
               </div>
             )}
@@ -294,7 +307,7 @@ export default function Home() {
         {status === 'idle' && !response && (
           <div className="mt-8 text-center">
             <p className="text-xs text-white/20">
-              Built with Next.js, shadcn/ui, and LangGraph
+              {t('footer.builtWith')}
             </p>
           </div>
         )}
@@ -304,14 +317,14 @@ export default function Home() {
       <footer className="border-t border-white/[0.06] py-4">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <div className="flex items-center justify-between text-[11px] text-white/25">
-            <span>My Searcher - AI Research</span>
+            <span>{t('footer.brand')}</span>
             <a
               href="https://github.com/DevPedroGomes"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white/50 transition-colors"
             >
-              Portfolio
+              {t('footer.portfolio')}
             </a>
           </div>
         </div>
