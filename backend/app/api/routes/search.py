@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 import json
 import logging
+import time
 
 from app.core.config import settings
 from app.core.schemas import SearchRequest, SearchResponse, HealthResponse
