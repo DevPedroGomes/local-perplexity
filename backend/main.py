@@ -21,8 +21,6 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.PROJECT_NAME}")
     logger.info(f"Max concurrent sessions: {settings.MAX_CONCURRENT_SESSIONS}")
     logger.info(f"Primary LLM: Groq ({settings.GROQ_MODEL})")
-    if settings.DEEPSEEK_API_KEY:
-        logger.info(f"Fallback LLM: DeepSeek ({settings.DEEPSEEK_MODEL})")
     yield
     # Shutdown
     logger.info("Shutting down...")
@@ -47,7 +45,6 @@ app = FastAPI(
     ### Built with:
     - LangGraph for workflow orchestration
     - Groq for ultra-fast LLM inference (free tier)
-    - DeepSeek as fallback (cheapest API)
     - Tavily for web search
     - FastAPI for the REST API
 
@@ -70,7 +67,7 @@ if settings.ENV == "development":
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -87,8 +84,7 @@ async def root():
         "docs": "/docs",
         "health": f"{settings.API_V1_STR}/health",
         "llm_providers": {
-            "primary": f"Groq ({settings.GROQ_MODEL})",
-            "fallback": f"DeepSeek ({settings.DEEPSEEK_MODEL})" if settings.DEEPSEEK_API_KEY else None
+            "primary": f"Groq ({settings.GROQ_MODEL})"
         }
     }
 

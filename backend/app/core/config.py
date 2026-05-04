@@ -13,21 +13,19 @@ class Settings(BaseSettings):
     # CORS - In production, only allow specified origins
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
-    # LLM Configuration - Primary: Groq (fastest, free tier)
-    GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"  # Ultra-fast inference, free tier
-    # Alternative Groq models:
-    # - llama-3.3-70b-versatile (best quality, ~750 tok/s)
-    # - llama-3.1-70b-versatile (great quality, ~800 tok/s)
-    # - llama-3.1-8b-instant (faster, ~1300 tok/s)
-    # - mixtral-8x7b-32768 (good for long context)
+    # LLM Configuration
+    # Primary path: OpenRouter (aggregator — DeepSeek/Llama/Gemini/Anthropic via single key)
+    # Fallback path: Groq direct (kept for rollback; if OPENROUTER_API_KEY is set, OpenRouter wins)
+    LLM_PROVIDER: str = "openrouter"  # "openrouter" | "groq"
+    LLM_MODEL: str = "deepseek/deepseek-chat"  # OpenRouter model id
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    OPENROUTER_REFERER: str = "https://searcher.pgdev.com.br"
+    OPENROUTER_TITLE: str = "qa-pgdev local-perplexity"
 
-    # LLM Configuration - Fallback: DeepSeek (cheapest paid option)
-    DEEPSEEK_API_KEY: str = ""
-    DEEPSEEK_MODEL: str = "deepseek-chat"  # DeepSeek V3, $0.07/M input tokens
-    # Alternative DeepSeek models:
-    # - deepseek-chat (V3, fast, cheap)
-    # - deepseek-reasoner (R1, better reasoning, slower)
+    # Legacy Groq config (kept so we can flip back via LLM_PROVIDER=groq if needed)
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
     # Tavily API
     TAVILY_API_KEY: str = ""

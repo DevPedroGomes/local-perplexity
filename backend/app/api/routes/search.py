@@ -5,6 +5,7 @@ import logging
 import time
 
 from app.core.config import settings
+from app.core.errors import sanitize_error_message
 from app.core.schemas import SearchRequest, SearchResponse, HealthResponse
 from app.services.session_manager import session_manager
 from app.services.ip_rate_limiter import ip_rate_limiter
@@ -16,22 +17,18 @@ logger = logging.getLogger(__name__)
 
 
 def _get_client_ip(request: Request) -> str:
-    """Extract real client IP. Prefer x-real-ip (set by Traefik), fallback to last hop of x-forwarded-for."""
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()
+    """Extract real client IP.
+
+    Traefik (configured with trustedIPs at the entry-point) overwrites
+    X-Forwarded-For before forwarding, so the first entry is the real client IP.
+    Falls back to the direct peer address if the header is missing.
+    """
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[-1].strip()
+        first = forwarded.split(",")[0].strip()
+        if first:
+            return first
     return request.client.host if request.client else "unknown"
-
-
-def sanitize_error_message(error: Exception) -> str:
-    """Sanitize error messages to avoid leaking sensitive information in production."""
-    if settings.ENV == "development":
-        return str(error)
-    # In production, return a generic message
-    return "An internal error occurred. Please try again."
 
 
 @router.get("/health", response_model=HealthResponse)

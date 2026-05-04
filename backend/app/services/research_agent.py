@@ -5,25 +5,25 @@ This agent implements advanced RAG techniques:
 1. Chain-of-Thought: Step-by-step reasoning for query generation
 2. Grounded Generation: Only includes claims supported by sources
 3. Self-Reflection: Evaluates and improves response quality before returning
-4. Multi-provider LLM: Groq (fastest, free tier) with DeepSeek fallback
+4. Groq LLM: Ultra-fast inference, free tier
 5. Enhanced Search: Multiple results per query for better coverage
 """
 
 import asyncio
 import logging
-import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, AsyncGenerator, Generator, Literal, Optional
 
 from pydantic import BaseModel
 from tavily import TavilyClient
 from langchain_groq import ChatGroq
-from langchain_deepseek import ChatDeepSeek
+from langchain_openai import ChatOpenAI
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, START, END
 
 from app.core.config import settings
+from app.core.errors import sanitize_error_message
 from app.core.schemas import QueryResult, ReportState, ReflectionResult
 from app.core.prompts import (
     SYSTEM_PROMPT,
@@ -42,27 +42,36 @@ MAX_REFLECTION_ITERATIONS = 1  # Only 1 retry to keep costs down
 
 class LLMProvider:
     """
-    Multi-provider LLM wrapper with automatic fallback.
-
-    Primary: Groq (fastest inference, free tier with generous limits)
-    Fallback: DeepSeek (cheapest option at $0.07/M tokens)
-
-    The provider automatically switches to fallback on errors and attempts
-    to return to primary after successful fallback calls.
+    LLM wrapper. Default: OpenRouter (multi-provider aggregator).
+    Fallback path retained: Groq direct, if LLM_PROVIDER=groq.
     """
 
     def __init__(self):
         self._primary: Optional[BaseChatModel] = None
-        self._fallback: Optional[BaseChatModel] = None
-        self._using_fallback = False
-        self._fallback_call_count = 0
-        self._retry_primary_after = 5
-        self._lock = threading.Lock()
         self._init_providers()
 
     def _init_providers(self):
-        """Initialize LLM providers based on available API keys."""
-        if settings.GROQ_API_KEY:
+        provider = (settings.LLM_PROVIDER or "").lower()
+
+        if provider == "openrouter" and settings.OPENROUTER_API_KEY:
+            try:
+                self._primary = ChatOpenAI(
+                    model=settings.LLM_MODEL,
+                    api_key=settings.OPENROUTER_API_KEY,
+                    base_url=settings.OPENROUTER_BASE_URL,
+                    temperature=0.1,
+                    timeout=120,
+                    max_retries=2,
+                    default_headers={
+                        "HTTP-Referer": settings.OPENROUTER_REFERER,
+                        "X-Title": settings.OPENROUTER_TITLE,
+                    },
+                )
+                logger.info(f"Initialized OpenRouter with model: {settings.LLM_MODEL}")
+            except Exception as e:
+                logger.warning(f"Failed to initialize OpenRouter: {e}")
+
+        elif provider == "groq" and settings.GROQ_API_KEY:
             try:
                 self._primary = ChatGroq(
                     model=settings.GROQ_MODEL,
@@ -74,30 +83,17 @@ class LLMProvider:
             except Exception as e:
                 logger.warning(f"Failed to initialize Groq: {e}")
 
-        if settings.DEEPSEEK_API_KEY:
-            try:
-                self._fallback = ChatDeepSeek(
-                    model=settings.DEEPSEEK_MODEL,
-                    api_key=settings.DEEPSEEK_API_KEY,
-                    temperature=0.1,
-                    timeout=30,
-                )
-                logger.info(f"Initialized DeepSeek fallback with model: {settings.DEEPSEEK_MODEL}")
-            except Exception as e:
-                logger.warning(f"Failed to initialize DeepSeek: {e}")
-
-        if not self._primary and not self._fallback:
-            raise ValueError("No LLM provider configured. Set GROQ_API_KEY or DEEPSEEK_API_KEY.")
+        if not self._primary:
+            raise ValueError(
+                "No LLM provider configured. "
+                "Set LLM_PROVIDER=openrouter + OPENROUTER_API_KEY, or LLM_PROVIDER=groq + GROQ_API_KEY."
+            )
 
     @property
     def llm(self) -> BaseChatModel:
-        """Get the active LLM (primary or fallback)."""
-        if self._using_fallback and self._fallback:
-            return self._fallback
+        """Get the active LLM."""
         if self._primary:
             return self._primary
-        if self._fallback:
-            return self._fallback
         raise ValueError("No LLM available")
 
     def _build_messages(self, prompt: str) -> list:
@@ -107,116 +103,28 @@ class LLMProvider:
             HumanMessage(content=prompt),
         ]
 
-    def _try_recover_primary(self, messages: list) -> Optional[object]:
-        """Try to return to primary LLM after fallback period. Returns result or None."""
-        with self._lock:
-            should_try = self._using_fallback and self._primary and self._fallback_call_count >= self._retry_primary_after
-        if not should_try:
-            return None
-        try:
-            logger.info("Attempting to return to primary LLM...")
-            result = self._primary.invoke(messages)
-            logger.info("Successfully returned to primary LLM")
-            with self._lock:
-                self._using_fallback = False
-                self._fallback_call_count = 0
-            return result
-        except Exception as e:
-            logger.warning(f"Primary LLM still failing ({e}), continuing with fallback")
-            with self._lock:
-                self._fallback_call_count = 0
-            return None
-
     def invoke(self, prompt: str):
-        """Invoke LLM with system prompt and automatic fallback."""
+        """Invoke LLM with system prompt."""
         messages = self._build_messages(prompt)
-
-        recovery = self._try_recover_primary(messages)
-        if recovery is not None:
-            return recovery
-
-        try:
-            result = self.llm.invoke(messages)
-            with self._lock:
-                if self._using_fallback:
-                    self._fallback_call_count += 1
-            return result
-        except Exception as e:
-            with self._lock:
-                if not self._using_fallback and self._fallback:
-                    logger.warning(f"Primary LLM failed ({e}), switching to fallback")
-                    self._using_fallback = True
-                    self._fallback_call_count = 1
-            if self._fallback:
-                return self._fallback.invoke(messages)
-            raise
+        return self.llm.invoke(messages)
 
     def invoke_structured(self, prompt: str, schema):
-        """Invoke LLM with structured output and automatic fallback."""
+        """Invoke LLM with structured output."""
         messages = self._build_messages(prompt)
-
-        # Try recovery to primary if in fallback mode
-        with self._lock:
-            should_try = self._using_fallback and self._primary and self._fallback_call_count >= self._retry_primary_after
-        if should_try:
-            try:
-                logger.info("Attempting to return to primary LLM (structured)...")
-                result = self._primary.with_structured_output(schema).invoke(messages)
-                logger.info("Successfully returned to primary LLM")
-                with self._lock:
-                    self._using_fallback = False
-                    self._fallback_call_count = 0
-                return result
-            except Exception as e:
-                logger.warning(f"Primary LLM still failing ({e}), continuing with fallback")
-                with self._lock:
-                    self._fallback_call_count = 0
-
-        try:
-            result = self.llm.with_structured_output(schema).invoke(messages)
-            with self._lock:
-                if self._using_fallback:
-                    self._fallback_call_count += 1
-            return result
-        except Exception as e:
-            with self._lock:
-                if not self._using_fallback and self._fallback:
-                    logger.warning(f"Primary LLM failed ({e}) on structured output, switching to fallback")
-                    self._using_fallback = True
-                    self._fallback_call_count = 1
-            if self._fallback:
-                return self._fallback.with_structured_output(schema).invoke(messages)
-            raise
+        return self.llm.with_structured_output(schema).invoke(messages)
 
     def stream(self, prompt: str) -> Generator:
-        """Stream LLM response with automatic fallback."""
+        """Stream LLM response."""
         messages = self._build_messages(prompt)
-
-        try:
-            for chunk in self.llm.stream(messages):
-                yield chunk
-            with self._lock:
-                if self._using_fallback:
-                    self._fallback_call_count += 1
-        except Exception as e:
-            with self._lock:
-                if not self._using_fallback and self._fallback:
-                    logger.warning(f"Primary LLM failed ({e}) during stream, switching to fallback")
-                    self._using_fallback = True
-                    self._fallback_call_count = 1
-            if self._fallback:
-                for chunk in self._fallback.stream(messages):
-                    yield chunk
-            else:
-                raise
+        for chunk in self.llm.stream(messages):
+            yield chunk
 
     def get_provider_name(self) -> str:
-        """Get the name of the active provider."""
-        if self._using_fallback:
-            return "DeepSeek"
-        if self._primary:
-            return "Groq"
-        return "DeepSeek"
+        """Get the name of the active provider (used by the UI badges)."""
+        provider = (settings.LLM_PROVIDER or "").lower()
+        if provider == "openrouter":
+            return "OpenRouter"
+        return "Groq"
 
 
 class ResearchAgent:
@@ -224,7 +132,7 @@ class ResearchAgent:
     LangGraph-based research agent with self-reflection capabilities.
 
     Features:
-    - Multi-provider LLM with automatic fallback
+    - Groq LLM (fast inference)
     - Enhanced search with multiple results per query
     - Chain-of-Thought query generation
     - Grounded generation with source verification
@@ -492,7 +400,8 @@ class ResearchAgent:
         try:
             queries_result = await asyncio.to_thread(self._build_queries, state)
         except Exception as e:
-            yield {"event": "error", "data": {"message": f"Failed to generate queries: {str(e)}"}}
+            logger.error(f"Failed to generate queries: {e}", exc_info=True)
+            yield {"event": "error", "data": {"message": f"Failed to generate queries: {sanitize_error_message(e)}"}}
             return
 
         queries = queries_result["queries"]
@@ -553,7 +462,8 @@ class ResearchAgent:
                     draft_text += token
                     yield {"event": "content", "data": {"token": token}}
         except Exception as e:
-            yield {"event": "error", "data": {"message": f"Synthesis failed: {str(e)}"}}
+            logger.error(f"Synthesis failed: {e}", exc_info=True)
+            yield {"event": "error", "data": {"message": f"Synthesis failed: {sanitize_error_message(e)}"}}
             return
 
         state = ReportState(

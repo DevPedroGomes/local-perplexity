@@ -5,6 +5,12 @@ services:
       dockerfile: Dockerfile
     container_name: searcher-backend
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
     env_file:
       - .env
     environment:
@@ -28,7 +34,7 @@ services:
       - "traefik.http.routers.searcher-api.rule=Host(`searcher.pgdev.com.br`) && PathPrefix(`/api`)"
       - "traefik.http.routers.searcher-api.tls=true"
       - "traefik.http.routers.searcher-api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.searcher-api.middlewares=searcher-security@docker"
+      - "traefik.http.routers.searcher-api.middlewares=searcher-security@docker,global-ratelimit@file,strip-server-header@file"
       - "traefik.http.routers.searcher-api.priority=10"
       - "traefik.http.services.searcher-api.loadbalancer.server.port=8000"
       # Security Headers
@@ -73,7 +79,7 @@ services:
       - "traefik.http.routers.searcher.rule=Host(`searcher.pgdev.com.br`)"
       - "traefik.http.routers.searcher.tls=true"
       - "traefik.http.routers.searcher.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.searcher.middlewares=searcher-security@docker"
+      - "traefik.http.routers.searcher.middlewares=searcher-security@docker,global-ratelimit@file,strip-server-header@file"
       - "traefik.http.routers.searcher.priority=1"
       - "traefik.http.services.searcher.loadbalancer.server.port=3000"
     healthcheck:

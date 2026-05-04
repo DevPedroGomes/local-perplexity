@@ -130,7 +130,7 @@ export default function Home() {
                 {t('hero.description')}
               </p>
               <div className="flex items-center justify-center gap-2">
-                {['LangGraph', 'Groq', 'Tavily'].map((tech) => (
+                {['LangGraph', 'OpenRouter', 'Tavily'].map((tech) => (
                   <span key={tech} className="text-[11px] text-white/40 bg-white/[0.04] border border-white/[0.08] rounded-full px-2.5 py-1 font-medium">
                     {tech}
                   </span>

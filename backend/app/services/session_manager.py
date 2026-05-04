@@ -82,7 +82,7 @@ class SessionManager:
             if not session:
                 return False
             if not session.creator_ip:
-                return True
+                return False
             return session.creator_ip == client_ip
 
     async def check_rate_limit(self, session_id: str) -> Tuple[bool, Optional[str], Optional[int]]:
