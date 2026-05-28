@@ -117,12 +117,25 @@ export default function Home() {
         {/* HERO — idle state only   */}
         {/* ======================== */}
         {status === 'idle' && !response && (
-          <div className="flex flex-col items-center justify-center text-center space-y-8 animate-fade-slide-in pt-8 sm:pt-16">
+          <div className="relative flex flex-col items-center justify-center text-center space-y-8 animate-fade-slide-in pt-8 sm:pt-16">
+            {/* Hero radial glow */}
+            <div
+              aria-hidden
+              className="absolute inset-0 -z-10 pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(96,165,250,0.18), transparent 60%), radial-gradient(ellipse 40% 25% at 80% 30%, rgba(139,92,246,0.12), transparent 70%)",
+              }}
+            />
             <div className="space-y-4">
-              <div className="h-14 w-14 rounded-2xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center mx-auto border-gradient">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] text-white/60 backdrop-blur-md">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+                <span className="font-mono">5-stage LangGraph pipeline</span>
+              </div>
+              <div className="h-14 w-14 rounded-2xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center mx-auto border-gradient shadow-[0_0_40px_rgba(96,165,250,0.25)]">
                 <Sparkles className="h-7 w-7 text-blue-400" />
               </div>
-              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tighter text-white">
                 {t('hero.title')}
               </h1>
               <p className="text-sm italic text-white/30">{t('hero.subtitle')}</p>
@@ -316,16 +329,34 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-white/[0.06] py-4">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <div className="flex items-center justify-between text-[11px] text-white/25">
-            <span>{t('footer.brand')}</span>
-            <a
-              href="https://github.com/DevPedroGomes"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-white/50 transition-colors"
-            >
-              {t('footer.portfolio')}
-            </a>
+          <div className="flex flex-col items-center gap-2 text-[11px] text-white/25 sm:flex-row sm:justify-between">
+            <span>&copy; {new Date().getFullYear()} · {t('footer.brand')}</span>
+            <div className="flex items-center gap-4">
+              <a
+                href="https://github.com/DevPedroGomes"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white/50 transition-colors"
+              >
+                GitHub
+              </a>
+              <a
+                href="https://www.linkedin.com/in/devpgomes"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white/50 transition-colors"
+              >
+                LinkedIn
+              </a>
+              <a
+                href="https://pgdev.com.br"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white/50 transition-colors"
+              >
+                {t('footer.portfolio')}
+              </a>
+            </div>
           </div>
         </div>
       </footer>
