@@ -46,6 +46,7 @@ services:
       - "traefik.http.middlewares.searcher-security.headers.browserXssFilter=true"
       - "traefik.http.middlewares.searcher-security.headers.referrerPolicy=strict-origin-when-cross-origin"
       - "traefik.http.middlewares.searcher-security.headers.frameDeny=true"
+      - "traefik.http.middlewares.searcher-security.headers.contentSecurityPolicy=default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
       interval: 30s
